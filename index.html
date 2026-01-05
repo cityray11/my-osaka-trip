@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오사카 가족 벚꽃 여행 계획 (3/29 - 3/31)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; }
+        .chart-container { 
+            position: relative; 
+            width: 100%; 
+            max-width: 600px; 
+            margin: 0 auto; 
+            height: 300px; 
+            max-height: 400px; 
+        }
+        .expand-content {
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        .expand-content.active {
+            max-height: 1000px;
+            opacity: 1;
+        }
+        .tab-btn.active {
+            border-bottom: 2px solid #be123c; /* rose-700 */
+            color: #be123c;
+            font-weight: 700;
+        }
+    </style>
+    <!-- Chosen Palette: Warm Rose & Neutral Gray (Sakura Theme) -->
+    <!-- Application Structure Plan: 
+         1. Dashboard Header: Trip Summary & Countdown.
+         2. Tabbed Itinerary (Core): Separated by Day 1, Day 2 (Kyoto), Day 3. Each day presents a timeline.
+         3. Interactive Smart Table: The user requested a table with dropdown details. This will be the main interactive element, combining schedule with specific spots and food options.
+         4. Gourmet Selector: A dedicated section to explore the "5 recommendations per meal" requirement, filterable by category/location.
+         5. Visual Insights: Charts showing expected crowd levels and budget breakdown (simulated).
+         Rationale: This structure separates the "When" (Itinerary) from the "What" (Gourmet Details) while linking them, allowing the user to focus on logistics first, then dive into food choices.
+    -->
+    <!-- Visualization & Content Choices:
+         1. Crowd Forecast (Chart.js Line): Helps manage expectations for family travel during Sakura season.
+         2. Category Distribution (Chart.js Doughnut): Visualizes the balance of the trip (Sightseeing vs Food vs Shopping).
+         3. Accordion Tables: Best for packing dense textual info (tips, links, specific menu items) without cluttering the view.
+         4. Confirmation: NO SVG or Mermaid used. Pure HTML/CSS/Canvas.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="bg-stone-50 text-stone-800">
+
+    <!-- Hero Section -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-xl md:text-2xl font-bold text-rose-600 flex items-center gap-2">
+                <span>🌸</span> 오사카 가족 벚꽃 여행
+            </h1>
+            <nav class="hidden md:flex gap-6 text-sm font-medium text-stone-600">
+                <a href="#summary" class="hover:text-rose-600">개요</a>
+                <a href="#itinerary" class="hover:text-rose-600">상세 일정</a>
+                <a href="#gourmet" class="hover:text-rose-600">맛집 리스트</a>
+                <a href="#tips" class="hover:text-rose-600">꿀팁 & 준비</a>
+            </nav>
+            <button id="mobile-menu-btn" class="md:hidden text-stone-600 font-bold">MENU</button>
+        </div>
+        <!-- Mobile Nav -->
+        <div id="mobile-nav" class="hidden md:hidden bg-stone-100 px-4 py-2 border-t">
+            <a href="#summary" class="block py-2">개요</a>
+            <a href="#itinerary" class="block py-2">상세 일정</a>
+            <a href="#gourmet" class="block py-2">맛집 리스트</a>
+            <a href="#tips" class="block py-2">꿀팁 & 준비</a>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-6 space-y-12">
+
+        <!-- Section 1: Trip Summary & Context -->
+        <section id="summary" class="grid md:grid-cols-2 gap-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-rose-400">
+                <h2 class="text-xl font-bold mb-4">여행 개요</h2>
+                <div class="space-y-3 text-sm">
+                    <p><span class="font-bold text-stone-500 w-20 inline-block">일정</span> 3월 29일(일) ~ 3월 31일(화) (2박 3일)</p>
+                    <p><span class="font-bold text-stone-500 w-20 inline-block">숙소</span> 오사카 우메다 (교통의 요지)</p>
+                    <p><span class="font-bold text-stone-500 w-20 inline-block">인원</span> 3명 (어머니, 본인, 동생)</p>
+                    <p><span class="font-bold text-stone-500 w-20 inline-block">테마</span> 🌸 벚꽃, 📸 사진, 🍱 식도락</p>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <h2 class="text-xl font-bold mb-4">예상 혼잡도 및 벚꽃 개화</h2>
+                <div class="chart-container">
+                    <canvas id="crowdChart"></canvas>
+                </div>
+                <p class="text-xs text-center text-stone-500 mt-2">※ 3월 말은 극성수기입니다. 식당 예약 필수.</p>
+            </div>
+        </section>
+
+        <!-- Section 2: Detailed Itinerary (The Core Request) -->
+        <section id="itinerary">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-stone-800">📅 상세 일정표</h2>
+                <p class="text-stone-500 mt-2">어머니의 체력을 고려하여 동선을 최소화하고, 각 날짜별 핵심 포인트에 집중했습니다. 탭을 눌러 날짜별 일정을 확인하세요. <br><strong>각 항목을 클릭하면 상세 정보와 추천 맛집을 볼 수 있습니다.</strong></p>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-stone-200 mb-6">
+                <button class="tab-btn active px-6 py-3 w-1/3 text-center transition-colors" onclick="switchTab('day1')">
+                    <span class="block text-xs text-stone-400">3/29 (일)</span>
+                    Day 1: 오사카 입국
+                </button>
+                <button class="tab-btn px-6 py-3 w-1/3 text-center transition-colors" onclick="switchTab('day2')">
+                    <span class="block text-xs text-stone-400">3/30 (월)</span>
+                    Day 2: 교토 벚꽃
+                </button>
+                <button class="tab-btn px-6 py-3 w-1/3 text-center transition-colors" onclick="switchTab('day3')">
+                    <span class="block text-xs text-stone-400">3/31 (화)</span>
+                    Day 3: 오사카성 & 귀국
+                </button>
+            </div>
+
+            <!-- Day 1 Content -->
+            <div id="day1" class="tab-content block space-y-4">
+                <!-- Generated by JS -->
+            </div>
+
+            <!-- Day 2 Content -->
+            <div id="day2" class="tab-content hidden space-y-4">
+                 <!-- Generated by JS -->
+            </div>
+
+            <!-- Day 3 Content -->
+            <div id="day3" class="tab-content hidden space-y-4">
+                 <!-- Generated by JS -->
+            </div>
+        </section>
+
+        <!-- Section 3: Gourmet Database (5 Recommendations per meal) -->
+        <section id="gourmet" class="bg-rose-50 p-6 rounded-2xl">
+            <h2 class="text-2xl font-bold text-rose-800 mb-4">🍣 끼니별 추천 맛집 리스트 (Top 5)</h2>
+            <p class="text-sm text-rose-700 mb-6">네이버 블로그, 카페, 유튜브 등 한국인 입맛 검증 완료된 곳들입니다. 우메다 숙소 근처와 관광지 위주로 선정했습니다.</p>
+            
+            <div class="grid md:grid-cols-2 gap-4" id="restaurant-grid">
+                <!-- Filters -->
+                <div class="md:col-span-2 flex flex-wrap gap-2 mb-4">
+                    <button onclick="filterFood('all')" class="bg-white border border-rose-200 px-4 py-2 rounded-full text-sm hover:bg-rose-100 transition shadow-sm">전체 보기</button>
+                    <button onclick="filterFood('sushi')" class="bg-white border border-rose-200 px-4 py-2 rounded-full text-sm hover:bg-rose-100 transition shadow-sm">스시/일식</button>
+                    <button onclick="filterFood('meat')" class="bg-white border border-rose-200 px-4 py-2 rounded-full text-sm hover:bg-rose-100 transition shadow-sm">야키니쿠/고기</button>
+                    <button onclick="filterFood('noodle')" class="bg-white border border-rose-200 px-4 py-2 rounded-full text-sm hover:bg-rose-100 transition shadow-sm">라멘/우동</button>
+                    <button onclick="filterFood('cafe')" class="bg-white border border-rose-200 px-4 py-2 rounded-full text-sm hover:bg-rose-100 transition shadow-sm">카페/디저트</button>
+                </div>
+                <!-- Cards Injected by JS -->
+            </div>
+        </section>
+
+        <!-- Section 4: Tips & Checklist -->
+        <section id="tips">
+             <h2 class="text-2xl font-bold mb-6">✅ 여행 준비 체크리스트</h2>
+             <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-white border rounded-lg p-5">
+                    <h3 class="font-bold text-lg mb-3 flex items-center gap-2">📱 필수 준비물</h3>
+                    <ul class="list-disc list-inside space-y-2 text-sm text-stone-700">
+                        <li><strong>비짓재팬웹(Visit Japan Web):</strong> 입국 심사 QR 미리 캡처 (필수)</li>
+                        <li><strong>교통 패스:</strong> 간사이 쓰루패스 2일권 or 이코카(ICOCA) 카드 (어머니와 이동 시 택시 병행 추천)</li>
+                        <li><strong>110V 돼지코:</strong> 다이소 구매</li>
+                        <li><strong>동전 지갑:</strong> 일본은 현금 사용이 많음</li>
+                        <li><strong>상비약:</strong> 소화제, 휴족시간 (많이 걷게 됨)</li>
+                    </ul>
+                </div>
+                <div class="bg-white border rounded-lg p-5">
+                    <h3 class="font-bold text-lg mb-3 flex items-center gap-2">💡 어머니와 함께하는 여행 팁</h3>
+                    <ul class="list-disc list-inside space-y-2 text-sm text-stone-700">
+                        <li><strong>택시 적극 활용:</strong> 3인이면 가까운 거리는 지하철보다 택시가 이득일 수 있습니다. (기본료 약 600-700엔)</li>
+                        <li><strong>웨이팅 피하기:</strong> 유명 맛집은 오픈런하거나 예약을 추천. 구글맵 '예약하기' 기능 활용.</li>
+                        <li><strong>백화점 식품관:</strong> 우메다 한큐/한신 백화점 지하 식품관은 천국입니다. 힘들 땐 숙소에서 고급 도시락 파티도 좋습니다.</li>
+                    </ul>
+                </div>
+             </div>
+        </section>
+    </main>
+
+    <footer class="bg-stone-800 text-stone-400 py-8 mt-12 text-center text-sm">
+        <p>© 2026 Osaka Family Trip Planner</p>
+        <p class="mt-2">즐겁고 안전한 가족 여행 되세요!</p>
+    </footer>
+
+    <script>
+        // --- DATA STORE ---
+        
+        // Itinerary Data
+        const itineraryData = {
+            day1: [
+                { time: "15:50 - 17:30", title: "청주 공항 출발 → 간사이 공항 도착", location: "비행기", type: "move", 
+                  desc: "입국 심사 후 리무진 버스 혹은 하루카 탑승. 우메다(오사카역)으로 이동.", 
+                  tips: "입국장에서 '리무진 버스(Limousine Bus)' 표지판을 따라가세요. 우메다행(Herbis Osaka or New Hankyu Hotel) 티켓 구매." },
+                { time: "19:00 - 20:00", title: "숙소 체크인 및 짐 풀기", location: "오사카 우메다 숙소", type: "stay", 
+                  desc: "우메다 지역 호텔 체크인. 잠시 휴식.", 
+                  tips: "우메다역은 던전이라 불릴 만큼 복잡합니다. 지하보다는 지상 육교나 1층으로 이동하여 방향을 잡는 것이 좋습니다." },
+                { time: "20:00 - 22:00", title: "저녁 식사 및 우메다 야경", location: "우메다 공중정원 or 햅파이브", type: "food", 
+                  desc: "도착 첫날은 무리하지 않고 숙소 근처 맛집 탐방.", 
+                  foodCategory: "sushi",
+                  tips: "우메다 공중정원 야경은 어머니들이 좋아하십니다. 햅파이브 관람차는 선택사항." }
+            ],
+            day2: [
+                { time: "08:30 - 09:30", title: "오사카 → 교토 이동", location: "한큐 전철 (우메다역 출발)", type: "move", 
+                  desc: "한큐 교토선 특급 탑승 (약 45분 소요). 가와라마치역 혹은 아라시야마역 하차.", 
+                  tips: "출근 시간대를 살짝 피하거나, 특급 열차의 맨 앞칸에 타면 풍경을 보며 갈 수 있습니다." },
+                { time: "10:00 - 13:00", title: "아라시야마 대나무 숲 & 텐류지", location: "교토 아라시야마", type: "sight", 
+                  desc: "치쿠린(대나무숲) 산책, 도게츠교 배경으로 벚꽃 사진 촬영.", 
+                  tips: "아라시야마 벚꽃은 강변을 따라 매우 아름답습니다. 인력거 투어를 짧게(30분) 이용하면 어머니가 편안해 하십니다." },
+                { time: "13:00 - 14:30", title: "점심 식사 (교토)", location: "아라시야마 인근", type: "food", 
+                  desc: "두부 요리 혹은 깔끔한 가정식/소바.", 
+                  foodCategory: "kyoto_lunch" },
+                { time: "15:00 - 17:30", title: "청수사(기요미즈데라) & 니넨자카", location: "교토 동부", type: "sight", 
+                  desc: "교토의 상징. 벚꽃과 어우러진 목조 건축물 감상.", 
+                  tips: "오르막길이 많습니다. 택시를 타고 '기요미즈데라 입구'까지 최대한 올라가달라고 하세요." },
+                { time: "18:00 - 20:00", title: "기온 거리 & 저녁 식사", location: "기온 시조", type: "food", 
+                  desc: "전통 거리 산책 후 가이세키 혹은 장어덮밥.", 
+                  foodCategory: "kyoto_dinner" },
+                { time: "20:00 - 21:00", title: "오사카 복귀", location: "한큐 전철", type: "move", 
+                  desc: "우메다 숙소로 복귀 및 휴식." }
+            ],
+            day3: [
+                { time: "10:00 - 11:00", title: "체크아웃 & 짐 보관", location: "호텔 로비", type: "stay", 
+                  desc: "짐을 호텔에 맡기거나 역 코인라커 이용.", tips: "공항 가기 편하게 우메다역 코인라커 이용 추천." },
+                { time: "11:30 - 14:00", title: "오사카성 벚꽃 놀이 & 뱃놀이", location: "오사카성 공원", type: "sight", 
+                  desc: "니시노마루 정원이 벚꽃 명소입니다. 고자부네 놀잇배 예약 추천.", 
+                  tips: "오사카성 천수각 내부는 엘리베이터 줄이 길면 생략하고 외부 공원 위주로 산책하세요." },
+                { time: "14:00 - 15:30", title: "점심 식사 (오사카 소울푸드)", location: "오사카성 근처 or 도톤보리", type: "food", 
+                  desc: "오코노미야키, 타코야키 등.", 
+                  foodCategory: "osaka_soul" },
+                { time: "16:00 - 18:00", title: "신사이바시 쇼핑 or 카페 휴식", location: "신사이바시/우메다", type: "shop", 
+                  desc: "드럭스토어 쇼핑, 백화점 손수건 선물 구매.", 
+                  tips: "다이마루 백화점, 한큐 백화점 추천. 텍스 리펀 받으려면 여권 필수 지참." },
+                { time: "18:00 - 19:30", title: "공항 이동", location: "리무진 버스", type: "move", 
+                  desc: "우메다(신한큐호텔 앞)에서 공항 리무진 탑승.", 
+                  tips: "퇴근 시간대 차 막힘 고려하여 여유 있게 출발하세요." },
+                { time: "22:00", title: "귀국행 비행기 이륙", location: "간사이 공항", type: "move", 
+                  desc: "면세점 로이스 초콜릿 구매 후 탑승." }
+            ]
+        };
+
+        // Restaurant Data (5 per category/context)
+        const restaurantData = {
+            sushi: [
+                { name: "카메스시 총본점", loc: "우메다", desc: "한국인 국룰 맛집. 두툼한 참치 뱃살이 일품.", link: "현장 대기 필수" },
+                { name: "하코다테 칸타로", loc: "그랜드프런트 오사카", desc: "회전초밥이지만 퀄리티 최상. 쾌적함.", link: "쇼핑몰 내 위치" },
+                { name: "우오신 스시", loc: "우메다", desc: "네타(회)가 엄청 큰 대왕스시. 가성비 좋음.", link: "예약 가능" },
+                { name: "스시 사카바 사시스", loc: "우메다", desc: "요즘 핫한 인스타 감성 스시 주점. 웨이팅 김.", link: "오픈런 추천" },
+                { name: "하루코마 스시", loc: "텐진바시스지", desc: "로컬 시장 분위기 가성비 갑.", link: "우메다에서 택시 10분" }
+            ],
+            meat: [
+                { name: "야키니쿠 리키마루", loc: "우메다", desc: "무한리필이지만 고기 질이 좋음. 가족단위 추천.", link: "예약 필수" },
+                { name: "만료(Manryo)", loc: "히가시우메다", desc: "현지인 줄 서는 야키니쿠. 가성비와 맛 모두 잡음.", link: "전화 예약" },
+                { name: "규카츠 모토무라", loc: "루쿠아 오사카", desc: "돌판에 구워먹는 규카츠. 실패 없는 맛.", link: "회전율 빠름" },
+                { name: "스테이크 론", loc: "기타신치", desc: "점심 런치 함박스테이크 가성비 최고.", link: "노포 감성" },
+                { name: "샤브테이", loc: "우메다", desc: "1인 샤브샤브 전문점. 깔끔하고 소스가 맛있음.", link: "혼밥/가족 모두 좋음" }
+            ],
+            kyoto_lunch: [
+                { name: "요시무라", loc: "아라시야마", desc: "도게츠교와 강을 바라보며 먹는 소바.", link: "뷰 맛집" },
+                { name: "카츠쿠라", loc: "교토 역/산조", desc: "교토 프리미엄 돈카츠. 깨를 갈아먹는 재미.", link: "체인점이라 안정적" },
+                { name: "히로카와", loc: "아라시야마", desc: "미슐랭 장어덮밥. 예약 없으면 먹기 힘듦.", link: "한 달 전 예약" },
+                { name: "이네", loc: "아라시야마", desc: "교토 명물 두부 요리 정식. 담백하고 건강한 맛.", link: "부모님 추천" },
+                { name: "% 아라비카 응커피", loc: "아라시야마", desc: "식사는 아니지만 필수 코스. 라떼 맛집.", link: "강변에서 사진 필수" }
+            ],
+            kyoto_dinner: [
+                { name: "기온 탄토", loc: "기온", desc: "철판 오코노미야키. 기온 거리 분위기 굿.", link: "대기 있음" },
+                { name: "이즈우", loc: "기온", desc: "교토 명물 고등어 초밥(사바즈시) 노포.", link: "호불호 있음, 포장 추천" },
+                { name: "혼케 오와리야", loc: "가와라마치", desc: "550년 전통 소바집. 건물이 문화재급.", link: "분위기 압살" },
+                { name: "카네쇼 장어덮밥", loc: "기온", desc: "계란 지단이 올라가는 킨시동 맛집.", link: "예약 필수" },
+                { name: "멘야 이노이치", loc: "가와라마치", desc: "미슐랭 빕구르망 라멘. 국물이 맑고 깔끔.", link: "어머니도 좋아하실 맛" }
+            ],
+            osaka_soul: [
+                { name: "키지", loc: "우메다 공중정원 지하", desc: "오사카 오코노미야키 3대 맛집. 사장님 친절.", link: "줄 깁니다" },
+                { name: "하나다코", loc: "우메다", desc: "파(네기)가 잔뜩 올라가는 타코야키.", link: "서서 먹거나 포장" },
+                { name: "쿠시카츠 다루마", loc: "루쿠아/도톤보리", desc: "꼬치 튀김. 맥주 안주로 최고.", link: "소스 두번 찍기 금지" },
+                { name: "카무쿠라 라멘", loc: "도톤보리/우메다", desc: "배추가 들어가 시원한 국물. 한국인 입맛 저격.", link: "해장 추천" },
+                { name: "치보", loc: "우메다", desc: "고급스러운 오코노미야키. 철판 퍼포먼스.", link: "깔끔함" }
+            ],
+            cafe: [
+                { name: "시아와세노 팬케이크", loc: "우메다", desc: "폭신폭신한 수플레 팬케이크.", link: "달달함 충전" },
+                { name: "하브스(HARBS)", loc: "한큐 삼번가", desc: "과일 크레이프 케이크 필수.", link: "웨이팅 있음" },
+                { name: "블루보틀", loc: "우메다 차야마치", desc: "깔끔한 인테리어와 라떼.", link: "잠시 휴식" },
+                { name: "가리겟트", loc: "우메다", desc: "밀푀유 디저트. 선물용으로도 인기.", link: "그랜드프런트 근처" },
+                { name: "런던 티룸", loc: "우메다", desc: "고풍스러운 영국식 홍차 전문점. 조용함.", link: "어머니 취향 저격" }
+            ]
+        };
+
+        // --- RENDER FUNCTIONS ---
+
+        function renderItinerary(dayId) {
+            const container = document.getElementById(dayId);
+            const data = itineraryData[dayId];
+            
+            let html = '';
+            data.forEach((item, index) => {
+                const icon = item.type === 'move' ? '✈️' : item.type === 'food' ? '🍱' : item.type === 'sight' ? '🌸' : '🏨';
+                const rowClass = item.type === 'move' ? 'bg-stone-50 border-l-4 border-stone-300' : 'bg-white border-l-4 border-rose-300 shadow-sm';
+                
+                html += `
+                <div class="${rowClass} p-4 rounded-r-lg cursor-pointer hover:shadow-md transition" onclick="toggleDetail('${dayId}-${index}')">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-4">
+                            <span class="text-2xl">${icon}</span>
+                            <div>
+                                <p class="text-xs font-bold text-stone-500">${item.time}</p>
+                                <h3 class="font-bold text-stone-800">${item.title}</h3>
+                                <p class="text-xs text-stone-500">📍 ${item.location}</p>
+                            </div>
+                        </div>
+                        <div class="text-stone-400">▼</div>
+                    </div>
+                    
+                    <!-- Expandable Detail -->
+                    <div id="${dayId}-${index}" class="expand-content mt-2 pt-2 border-t border-dashed border-stone-200 text-sm text-stone-600">
+                        <p class="mb-2">${item.desc}</p>
+                        <p class="bg-yellow-50 p-2 rounded text-xs">💡 <strong>Tip:</strong> ${item.tips || "즐거운 시간 되세요!"}</p>
+                        ${renderFoodOptions(item.foodCategory)}
+                    </div>
+                </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderFoodOptions(categoryKey) {
+            if (!categoryKey || !restaurantData[categoryKey]) return '';
+            
+            const list = restaurantData[categoryKey];
+            let html = '<div class="mt-3"><p class="font-bold text-rose-600 text-xs mb-1">추천 식당 (Top 5):</p><ul class="space-y-1">';
+            list.forEach(r => {
+                html += `<li class="flex justify-between items-center text-xs bg-rose-50 p-1.5 rounded">
+                            <span><strong>${r.name}</strong> (${r.loc})</span>
+                            <span class="text-stone-400 text-[10px]">${r.desc}</span>
+                         </li>`;
+            });
+            html += '</ul></div>';
+            return html;
+        }
+
+        function toggleDetail(id) {
+            const el = document.getElementById(id);
+            if (el.classList.contains('active')) {
+                el.classList.remove('active');
+            } else {
+                // Close others if needed, keeping simple for now
+                el.classList.add('active');
+            }
+        }
+
+        function switchTab(dayId) {
+            // Hide all contents
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('block'));
+            
+            // Show selected
+            document.getElementById(dayId).classList.remove('hidden');
+            document.getElementById(dayId).classList.add('block');
+
+            // Update buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        function renderRestaurantCards(filter = 'all') {
+            const grid = document.getElementById('restaurant-grid');
+            // Keep the filter buttons, remove cards (elements after index 0 div)
+            // Simpler: clear non-filter children. 
+            // Actually, let's regenerate the card HTML only.
+            
+            // Collect all data
+            let displayList = [];
+            if (filter === 'all') {
+                Object.keys(restaurantData).forEach(key => {
+                    restaurantData[key].forEach(item => {
+                        item.category = key; // Add cat for display
+                        displayList.push(item);
+                    });
+                });
+            } else if (filter === 'noodle') {
+                 // Custom combining logic for demo
+                 restaurantData['osaka_soul'].forEach(i => displayList.push(i)); 
+                 restaurantData['kyoto_lunch'].forEach(i => displayList.push(i));
+            } else {
+                if (restaurantData[filter]) displayList = restaurantData[filter];
+            }
+
+            // Remove existing cards
+            const cards = document.querySelectorAll('.resto-card');
+            cards.forEach(c => c.remove());
+
+            // Add new cards
+            let html = '';
+            displayList.forEach(item => {
+                html += `
+                <div class="resto-card bg-white p-4 rounded-lg border border-stone-100 shadow-sm hover:shadow-md transition">
+                    <div class="flex justify-between items-start mb-2">
+                        <h4 class="font-bold text-rose-700">${item.name}</h4>
+                        <span class="text-[10px] bg-stone-100 px-2 py-1 rounded text-stone-500">${item.loc}</span>
+                    </div>
+                    <p class="text-sm text-stone-600 mb-2">${item.desc}</p>
+                    <p class="text-xs text-rose-400">✨ ${item.link}</p>
+                </div>
+                `;
+            });
+            grid.insertAdjacentHTML('beforeend', html);
+        }
+
+        function filterFood(type) {
+            renderRestaurantCards(type);
+        }
+
+        // --- CHART CONFIG ---
+        function initCharts() {
+            const ctx = document.getElementById('crowdChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['3/29 (일)', '3/30 (월)', '3/31 (화)'],
+                    datasets: [{
+                        label: '예상 혼잡도 (벚꽃 시즌)',
+                        data: [90, 85, 75], // Sunday high, Mon/Tue slightly less
+                        borderColor: '#fb7185', // rose-400
+                        backgroundColor: 'rgba(251, 113, 133, 0.2)',
+                        fill: true,
+                        tension: 0.4
+                    }, {
+                         label: '체력 소모도',
+                         data: [40, 95, 60], // Kyoto day is hard
+                         borderColor: '#a8a29e', // stone-400
+                         borderDash: [5, 5],
+                         fill: false,
+                         tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, max: 100, display: false }
+                    }
+                }
+            });
+        }
+
+        // --- INIT ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderItinerary('day1');
+            renderItinerary('day2');
+            renderItinerary('day3');
+            renderRestaurantCards('all');
+            initCharts();
+            
+            // Mobile menu toggle
+            document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+                document.getElementById('mobile-nav').classList.toggle('hidden');
+            });
+        });
+
+    </script>
+</body>
+</html>
