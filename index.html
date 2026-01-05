@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2026 오사카/교토 미식 전략 보고서</title>
+    <title>2026 오사카/교토 미식 전략 보고서 (Visual Ver.)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -45,6 +45,8 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             z-index: 10;
         }
+        /* 이미지 로딩 시 깜빡임 방지 */
+        img { transition: opacity 0.3s ease-in-out; }
     </style>
 </head>
 <body class="bg-stone-100 text-stone-800 pb-20">
@@ -56,11 +58,11 @@
                 <h1 class="text-lg font-bold text-rose-700 flex items-center gap-2">
                     <i class="fa-solid fa-utensils"></i> 2026 간사이 미식 전략
                 </h1>
-                <p class="text-[10px] text-stone-500">3.29(일) - 3.31(화) | 우메다 & 아라시야마 집중 분석</p>
+                <p class="text-[10px] text-stone-500">3.29(일) - 3.31(화) | 우메다 & 아라시야마</p>
             </div>
             <div class="flex gap-2">
                 <a href="#checklist" class="text-xs bg-stone-100 px-3 py-2 rounded font-bold hover:bg-stone-200 transition">
-                    <i class="fa-solid fa-list-check"></i> 준비
+                    <i class="fa-solid fa-list-check"></i> 준비물
                 </a>
             </div>
         </div>
@@ -203,7 +205,7 @@
     </footer>
 
     <script>
-        // --- DATA: SCHEDULE ---
+        // --- DATA: SCHEDULE (With Real Images) ---
         const scheduleData = {
             day1: [
                 { 
@@ -211,7 +213,7 @@
                     title: "청주 ✈️ 오사카 (이동)", 
                     icon: "fa-plane",
                     color: "border-stone-400",
-                    img: "https://placehold.co/600x300?text=Kansai+Airport",
+                    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Kansai_International_Airport_Terminal_1_20230617.jpg/800px-Kansai_International_Airport_Terminal_1_20230617.jpg",
                     detail: "간사이 공항 도착 후 입국심사. 1시간 예상. 짐 찾고 1층 5번 승강장으로 이동."
                 },
                 { 
@@ -219,7 +221,7 @@
                     title: "공항 리무진 (한큐 산반가이행)", 
                     icon: "fa-bus",
                     color: "border-blue-400",
-                    img: "https://placehold.co/600x300?text=Airport+Limousine",
+                    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Airport_Limousine_Bus_Hino_S_elega.jpg/800px-Airport_Limousine_Bus_Hino_S_elega.jpg",
                     detail: "<strong>주의:</strong> 도착지가 '신한큐호텔'이 아닌 <strong>'한큐 산반가이'</strong>입니다. 하차 후 구글맵을 켜고 숙소로 이동하세요."
                 },
                 { 
@@ -227,7 +229,7 @@
                     title: "저녁: 카메스시 or 하나다코", 
                     icon: "fa-utensils",
                     color: "border-orange-400",
-                    img: "https://placehold.co/600x300?text=Umeda+Food",
+                    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Takoyaki_by_Hajime_NANO_in_Osaka.jpg/800px-Takoyaki_by_Hajime_NANO_in_Osaka.jpg",
                     detail: "첫날은 예약 없이 즐길 수 있는 오사카 소울 푸드 추천. '하나다코'에서 네기마요 타코야키로 가볍게 시작하거나, '카메스시'에서 맥주 한 잔."
                 }
             ],
@@ -237,15 +239,15 @@
                     title: "교토로 이동 (한큐 전철)", 
                     icon: "fa-train",
                     color: "border-green-500",
-                    img: "https://placehold.co/600x300?text=Hankyu+Train",
-                    detail: "우메다역에서 '한큐 교토선 특급' 탑승. 카츠라역 환승 -> 아라시야마역 하차."
+                    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Hankyu_9300_9400.JPG/800px-Hankyu_9300_9400.JPG",
+                    detail: "우메다역에서 '한큐 교토선 특급' 탑승. 자주색 열차(Maroon Color)를 확인하세요. 카츠라역 환승 -> 아라시야마역 하차."
                 },
                 { 
                     time: "10:00 - 12:00", 
                     title: "아라시야마 벚꽃 & 대나무숲", 
                     icon: "fa-camera",
                     color: "border-pink-400",
-                    img: "https://placehold.co/600x300?text=Arashiyama+Bamboo",
+                    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Arashiyama_Bamboo_Grove_Kyoto_Japan.jpg/800px-Arashiyama_Bamboo_Grove_Kyoto_Japan.jpg",
                     detail: "치쿠린(대나무숲)과 텐류지 정원 산책. 벚꽃 시즌 인파가 많으므로 오전 일찍 움직이는 것이 핵심."
                 },
                 { 
@@ -253,15 +255,15 @@
                     title: "런치: 예약해둔 식당 (쇼라이안/요시무라)", 
                     icon: "fa-utensils",
                     color: "border-orange-400",
-                    img: "https://placehold.co/600x300?text=Kyoto+Lunch",
-                    detail: "아라시야마는 '런치 집중' 지역입니다. 예약해둔 식당에서 여유롭게 식사."
+                    img: "https://images.unsplash.com/photo-1558985250-27a406d64cb3?w=800&q=80",
+                    detail: "아라시야마는 '런치 집중' 지역입니다. 교토의 정갈한 두부 요리나 소바를 즐기세요."
                 },
                 { 
                     time: "15:00 - 17:30", 
                     title: "청수사(기요미즈데라) 이동", 
                     icon: "fa-torii-gate",
                     color: "border-red-400",
-                    img: "https://placehold.co/600x300?text=Kiyomizudera",
+                    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Kiyomizu-dera_in_Kyoto-r.jpg/800px-Kiyomizu-dera_in_Kyoto-r.jpg",
                     detail: "아라시야마에서 택시 이동 추천 (약 3-4천엔). 버스는 부모님 체력 소모 심함. 니넨자카 산책."
                 }
             ],
@@ -271,7 +273,7 @@
                     title: "체크아웃 & 짐 보관", 
                     icon: "fa-suitcase",
                     color: "border-stone-400",
-                    img: "https://placehold.co/600x300?text=Luggage",
+                    img: "https://images.unsplash.com/photo-1521566652839-697aa473761a?w=800&q=80",
                     detail: "호텔 혹은 우메다역 코인라커 이용."
                 },
                 { 
@@ -279,7 +281,7 @@
                     title: "런치: 모리타야 스키야키", 
                     icon: "fa-utensils",
                     color: "border-orange-400",
-                    img: "https://placehold.co/600x300?text=Sukiyaki",
+                    img: "https://images.unsplash.com/photo-1543315560-6194b3c9b45b?w=800&q=80",
                     detail: "루쿠아 백화점 10층. 쇼핑과 식사를 한번에 해결. 공항 가기 전 최적의 동선."
                 },
                 { 
@@ -287,7 +289,7 @@
                     title: "오사카성 벚꽃 & 쇼핑", 
                     icon: "fa-brands fa-fort-awesome",
                     color: "border-pink-400",
-                    img: "https://placehold.co/600x300?text=Osaka+Castle",
+                    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Osaka_Castle_02bs3200.jpg/800px-Osaka_Castle_02bs3200.jpg",
                     detail: "니시노마루 정원 벚꽃 감상. 혹은 한큐백화점에서 선물 쇼핑."
                 },
                 { 
@@ -295,13 +297,13 @@
                     title: "공항 리무진 탑승 (한큐 산반가이)", 
                     icon: "fa-bus",
                     color: "border-blue-400",
-                    img: "https://placehold.co/600x300?text=Airport+Bus",
+                    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Airport_Limousine_Bus_Hino_S_elega.jpg/800px-Airport_Limousine_Bus_Hino_S_elega.jpg",
                     detail: "퇴근 시간 정체를 고려하여 18:00~18:30 버스 탑승 권장. 산반가이 터미널 위치 미리 파악 필수."
                 }
             ]
         };
 
-        // --- DATA: RESTAURANTS (Top 10 Strategy) ---
+        // --- DATA: RESTAURANTS (With Representative Food Images) ---
         const restaurants = [
             // Category A: Sushi
             {
@@ -314,8 +316,8 @@
                 hours: "12:00~14:00 / 17:00~23:00",
                 strategy: "💡 1개월 전 예약 필수. 카운터석 추천.",
                 link: "https://www.google.com/maps/search/?api=1&query=Sushi+Amato+Osaka",
-                reserve: "https://www.tablecheck.com/en/shops/sushi-amato/reserve", // Simulated valid link structure
-                img: "https://placehold.co/600x400/222/fff?text=Sushi+Amato",
+                reserve: "https://www.tablecheck.com/en/shops/sushi-amato/reserve", 
+                img: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=800&q=80",
                 reserveBtn: "온라인 예약 (TableCheck)"
             },
             {
@@ -328,7 +330,7 @@
                 hours: "11:30~22:30",
                 strategy: "💡 오픈 20분 전(11:10) 도착하여 첫 턴 입장 노리기.",
                 link: "https://www.google.com/maps/search/?api=1&query=Kame+Sushi+Total+Main+Store",
-                img: "https://placehold.co/600x400/orange/white?text=Kame+Sushi",
+                img: "https://images.unsplash.com/photo-1553621042-f6e147245754?w=800&q=80",
                 reserveBtn: "예약 불가 (현장대기)"
             },
             // Category B: Meat
@@ -343,7 +345,7 @@
                 strategy: "💡 2월 말 리뉴얼 재오픈 예정. 3월 방문 시 쾌적함. 예약 필수.",
                 link: "https://www.google.com/maps/search/?api=1&query=Moritaya+Lucua",
                 reserve: "https://moritaya-kyoto.co.jp/restaurant/lucua/",
-                img: "https://placehold.co/600x400/red/white?text=Moritaya+Sukiyaki",
+                img: "https://images.unsplash.com/photo-1543315560-6194b3c9b45b?w=800&q=80",
                 reserveBtn: "공홈 예약"
             },
             {
@@ -357,7 +359,7 @@
                 strategy: "💡 부모님 기념일 식사로 최적. 2주 전 예약.",
                 link: "https://www.google.com/maps/search/?api=1&query=Teppanyaki+Kiryu+Osaka",
                 reserve: "https://www.tablecheck.com/en/shops/hotelgranvia-osaka-kiryu/reserve",
-                img: "https://placehold.co/600x400/black/white?text=Teppanyaki+Kiryu",
+                img: "https://images.unsplash.com/photo-1549429158-71e84a20c3a8?w=800&q=80",
                 reserveBtn: "온라인 예약"
             },
             // Category C: Soul Food
@@ -371,7 +373,7 @@
                 hours: "11:30~21:30",
                 strategy: "💡 짐은 코인라커에. 식사 시간 피해서 방문.",
                 link: "https://www.google.com/maps/search/?api=1&query=Kiji+Umeda",
-                img: "https://placehold.co/600x400/brown/white?text=Kiji+Okonomiyaki",
+                img: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Okonomiyaki_002.jpg/800px-Okonomiyaki_002.jpg",
                 reserveBtn: "예약 불가 (현장대기)"
             },
             {
@@ -384,7 +386,7 @@
                 hours: "10:00~22:00",
                 strategy: "💡 포장해서 근처 공원이나 숙소에서 먹는 것도 방법.",
                 link: "https://www.google.com/maps/search/?api=1&query=Hanadako",
-                img: "https://placehold.co/600x400/green/white?text=Hanadako",
+                img: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Takoyaki_by_Hajime_NANO_in_Osaka.jpg/800px-Takoyaki_by_Hajime_NANO_in_Osaka.jpg",
                 reserveBtn: "예약 불가"
             },
             {
@@ -397,7 +399,7 @@
                 hours: "11:00~20:00",
                 strategy: "💡 공항 가기 전 마지막 당 충전 장소.",
                 link: "https://www.google.com/maps/search/?api=1&query=HARBS+Hankyu+Sanbangai",
-                img: "https://placehold.co/600x400/yellow/black?text=HARBS+Cake",
+                img: "https://images.unsplash.com/photo-1629899147585-7033580554c4?w=800&q=80",
                 reserveBtn: "워크인 전용"
             },
             // Category D: Kyoto (Arashiyama)
@@ -412,7 +414,7 @@
                 strategy: "💡 호텔 컨시어지 통해 2달 전 예약 부탁하기.",
                 link: "https://www.google.com/maps/search/?api=1&query=Shoraian+Kyoto",
                 reserve: "tel:+81-75-861-0123",
-                img: "https://placehold.co/600x400/gray/white?text=Shoraian+Tofu",
+                img: "https://images.unsplash.com/photo-1558985250-27a406d64cb3?w=800&q=80",
                 reserveBtn: "전화 예약 필수"
             },
             {
@@ -426,7 +428,7 @@
                 strategy: "💡 오픈런 하거나 온라인 예약.",
                 link: "https://www.google.com/maps/search/?api=1&query=Arashiyama+Yoshimura",
                 reserve: "https://yoyaku.toreta.in/yoshimura-arashiyama/",
-                img: "https://placehold.co/600x400/beige/black?text=Yoshimura+Soba",
+                img: "https://images.unsplash.com/photo-1519985176271-adb1088fa94c?w=800&q=80",
                 reserveBtn: "온라인 예약"
             },
             {
@@ -440,7 +442,7 @@
                 strategy: "💡 1개월 전 공홈 예약 오픈 즉시 클릭.",
                 link: "https://www.google.com/maps/search/?api=1&query=Unagi+Hirokawa",
                 reserve: "https://unagi-hirokawa.jp/reservation/index.html",
-                img: "https://placehold.co/600x400/brown/white?text=Hirokawa+Eel",
+                img: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Unaj%C5%AB_by_preetamrai_in_Roppongi%2C_Tokyo.jpg/800px-Unaj%C5%AB_by_preetamrai_in_Roppongi%2C_Tokyo.jpg",
                 reserveBtn: "공홈 예약 (예약금)"
             }
         ];
@@ -467,7 +469,7 @@
                         </div>
                     </div>
                     <div id="it-${dayId}-${idx}" class="expand-content border-t border-stone-100">
-                        <img src="${item.img}" alt="${item.title}" class="w-full h-32 object-cover">
+                        <img src="${item.img}" alt="${item.title}" class="w-full h-40 object-cover">
                         <div class="p-4 text-sm text-stone-600 bg-stone-50">
                             ${item.detail}
                         </div>
