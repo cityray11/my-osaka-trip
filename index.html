@@ -3,10 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2026 오사카 여행</title>
+    <title>2026 오사카/교토 클라우드 플래너</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase SDK (v11.6.1) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase 설정 (환경 변수 사용)
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let currentTripId = localStorage.getItem('last_trip_id') || null;
+        let unsubscribe = null;
+
+        // 전역 변수로 노출 (HTML에서 사용)
+        window.db = db;
+        window.auth = auth;
+        window.appId = appId;
+        
+        // 인증 및 초기화
+        async function initAuth() {
+            try {
+                await signInAnonymously(auth);
+            } catch (error) {
+                console.error("Auth Error:", error);
+            }
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                window.currentUser = user;
+                updateConnectionStatus(true);
+                
+                // 저장된 트립 ID가 있으면 바로 연결, 없으면 환영 모달 띄우기
+                if (currentTripId) {
+                    connectToTrip(currentTripId);
+                } else {
+                    openWelcomeModal();
+                }
+            } else {
+                updateConnectionStatus(false);
+            }
+        });
+
+        // 여행 연결 함수
+        window.connectToTrip = function(tripId) {
+            if (!currentUser) return;
+            if (!tripId) {
+                showToast("여행 코드를 입력해주세요.");
+                return;
+            }
+
+            // 기존 구독 해제
+            if (unsubscribe) unsubscribe();
+
+            tripId = tripId.trim();
+            currentTripId = tripId;
+            localStorage.setItem('last_trip_id', tripId);
+
+            document.getElementById('display-trip-code').innerText = tripId;
+            closeWelcomeModal();
+            showToast(`'${tripId}' 여행에 접속했습니다.`);
+
+            // 실시간 리스너 연결 (Strict Path 규칙 준수)
+            // Public Data Path: artifacts/{appId}/public/data/{collectionName}
+            const tripRef = doc(db, 'artifacts', appId, 'public', 'data', 'osaka_trips', tripId);
+
+            unsubscribe = onSnapshot(tripRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.items) {
+                        window.tripData = data.items;
+                        window.renderCards();
+                    }
+                } else {
+                    // 데이터가 없으면 (새로운 여행 코드)
+                    // 로컬에 기존 데이터가 있다면 업로드할지 물어볼 수도 있지만,
+                    // 여기서는 심플하게 빈 상태로 시작하거나 현재 로컬 데이터를 업로드함
+                    if (window.tripData.length > 0) {
+                        saveDataToCloud(); // 현재 로컬 데이터를 클라우드에 초기화
+                    } else {
+                        window.renderCards(); // 빈 화면 렌더링
+                    }
+                }
+            }, (error) => {
+                console.error("Sync Error:", error);
+                showToast("데이터 동기화 중 오류가 발생했습니다.");
+            });
+        };
+
+        // 데이터 저장 함수 (Firestore)
+        window.saveDataToCloud = async function() {
+            if (!currentUser || !currentTripId) return;
+
+            const tripRef = doc(db, 'artifacts', appId, 'public', 'data', 'osaka_trips', currentTripId);
+            try {
+                await setDoc(tripRef, {
+                    items: window.tripData,
+                    lastUpdated: new Date().toISOString(),
+                    updatedBy: currentUser.uid
+                }, { merge: true });
+            } catch (error) {
+                console.error("Save Error:", error);
+                showToast("저장 실패!");
+            }
+        };
+
+        initAuth();
+    </script>
+
     <style>
         body { font-family: 'Noto Sans KR', sans-serif; }
         .tab-content { display: none; animation: fadeIn 0.3s; }
@@ -15,9 +131,9 @@
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         
-        #lightbox, #menu-modal { transition: opacity 0.3s ease; }
-        #lightbox.hidden, #menu-modal.hidden { opacity: 0; pointer-events: none; }
-        #lightbox.flex, #menu-modal.flex { opacity: 1; pointer-events: auto; }
+        #lightbox, #menu-modal, #welcome-modal, #confirm-modal { transition: opacity 0.3s ease; }
+        .modal-hidden { opacity: 0; pointer-events: none; }
+        .modal-flex { opacity: 1; pointer-events: auto; display: flex; }
 
         .flight-card {
             background-image: radial-gradient(circle at 0 50%, transparent 10px, #fff 11px),
@@ -26,6 +142,10 @@
             background-position: 0 0, 100% 0;
             background-repeat: no-repeat;
         }
+        
+        /* 토스트 메시지 애니메이션 */
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .toast { animation: slideUp 0.3s ease-out; }
     </style>
 </head>
 <body class="bg-stone-100 text-stone-800 pb-24">
@@ -48,12 +168,12 @@
     <header class="bg-white sticky top-0 z-40 shadow-sm border-b border-stone-200">
         <div class="max-w-3xl mx-auto px-4 py-3 flex justify-between items-center">
             <h1 class="text-lg font-bold text-rose-600 flex items-center gap-2 cursor-pointer hover:opacity-80 transition" onclick="goHome()">
-                <i class="fa-solid fa-map"></i> Osaka
+                <i class="fa-solid fa-cloud"></i> <span id="display-trip-code" class="text-stone-800 text-sm font-normal bg-stone-100 px-2 py-1 rounded">접속중...</span>
             </h1>
             <div class="flex gap-2">
-                <a href="https://docs.google.com/spreadsheets/d/14w6schJSDujTsJbb6BhCdYpbiOjt49kw8gntE3wiIuk/edit?usp=sharing" target="_blank" class="text-xs bg-white text-stone-600 border border-stone-300 px-3 py-2 rounded-lg font-bold shadow-sm transition hover:bg-stone-50 flex items-center gap-1">
-                    <i class="fa-solid fa-won-sign"></i> 비용
-                </a>
+                <button onclick="openWelcomeModal()" class="text-xs bg-stone-800 text-white px-3 py-2 rounded-lg font-bold shadow-sm transition hover:bg-stone-700">
+                    <i class="fa-solid fa-users"></i> 공유
+                </button>
                 <button onclick="switchMode('view')" id="btn-view" class="text-xs bg-rose-600 text-white px-3 py-2 rounded-lg font-bold shadow transition">
                     <i class="fa-solid fa-list"></i> 일정
                 </button>
@@ -136,15 +256,16 @@
             <!-- 4. 카드 리스트 -->
             <div id="empty-state" class="hidden flex-col items-center justify-center py-12 text-center">
                 <div class="w-16 h-16 bg-stone-200 rounded-full flex items-center justify-center text-3xl mb-4 text-stone-400">📝</div>
-                <h3 class="text-lg font-bold text-stone-600">일정을 채워주세요</h3>
+                <h3 class="text-lg font-bold text-stone-600">등록된 일정이 없습니다.</h3>
+                <p class="text-xs text-stone-400 mt-1">우측 상단 '등록' 버튼을 눌러보세요.</p>
             </div>
 
             <div id="card-container" class="grid grid-cols-2 gap-4 pb-10">
                 <!-- JS로 생성됨 -->
             </div>
-
-            <div class="text-center pb-10">
-                <button onclick="clearAllData()" class="text-xs text-stone-400 underline hover:text-red-500">데이터 전체 삭제</button>
+            
+            <div class="text-center pb-10 text-[10px] text-stone-400">
+                <p>클라우드에 안전하게 저장 중입니다 <i class="fa-solid fa-check text-green-500"></i></p>
             </div>
         </div>
 
@@ -240,12 +361,12 @@
         </div>
 
         <!-- 이미지 라이트박스 -->
-        <div id="lightbox" class="fixed inset-0 bg-black/95 z-[100] hidden items-center justify-center p-4 cursor-pointer" onclick="closeLightbox()">
+        <div id="lightbox" class="fixed inset-0 bg-black/95 z-[100] modal-hidden items-center justify-center p-4 cursor-pointer flex" onclick="closeLightbox()">
             <img id="lightbox-img" class="max-w-full max-h-[90vh] object-contain rounded shadow-2xl" src="">
         </div>
 
         <!-- 메뉴판 등록 팝업 -->
-        <div id="menu-modal" class="fixed inset-0 bg-black/50 z-[110] hidden items-center justify-center p-4">
+        <div id="menu-modal" class="fixed inset-0 bg-black/50 z-[110] modal-hidden items-center justify-center p-4 flex">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 transform transition-all scale-100">
                 <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i class="fa-solid fa-book-open"></i> 메뉴판 등록</h3>
                 <input type="hidden" id="menu-target-id">
@@ -269,25 +390,123 @@
             </div>
         </div>
 
+        <!-- 여행 코드 입력 (환영) 모달 -->
+        <div id="welcome-modal" class="fixed inset-0 bg-black/80 z-[120] modal-hidden items-center justify-center p-4 flex">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+                <div class="w-12 h-12 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 text-rose-600 text-xl">
+                    <i class="fa-solid fa-plane-departure"></i>
+                </div>
+                <h2 class="text-xl font-bold mb-2 text-stone-800">여행을 시작합니다</h2>
+                <p class="text-xs text-stone-500 mb-6 leading-relaxed">
+                    가족들과 공유할<br>
+                    <strong>여행 코드(암호)</strong>를 입력해주세요.
+                </p>
+                <input type="text" id="trip-code-input" placeholder="예: 우리가족오사카2026" class="w-full bg-stone-50 border border-stone-300 rounded-xl p-3 text-center font-bold mb-4 focus:outline-none focus:ring-2 focus:ring-rose-500 text-stone-800 uppercase" onkeypress="if(event.key === 'Enter') handleConnect()">
+                <button onclick="handleConnect()" class="w-full bg-rose-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-rose-700 transition mb-3">
+                    시작하기
+                </button>
+                <p class="text-[10px] text-stone-400">가족에게도 이 코드를 알려주세요!</p>
+            </div>
+        </div>
+
+        <!-- 확인(Confirm) 모달 대체 -->
+        <div id="confirm-modal" class="fixed inset-0 bg-black/50 z-[130] modal-hidden items-center justify-center p-4 flex">
+            <div class="bg-white rounded-xl shadow-lg w-full max-w-xs p-5 text-center">
+                <h3 class="font-bold text-lg mb-2" id="confirm-title">확인</h3>
+                <p class="text-sm text-stone-600 mb-6" id="confirm-msg">정말 삭제하시겠습니까?</p>
+                <div class="flex gap-2">
+                    <button id="confirm-cancel-btn" class="flex-1 py-2 rounded-lg bg-stone-200 text-stone-600 text-sm font-bold">취소</button>
+                    <button id="confirm-ok-btn" class="flex-1 py-2 rounded-lg bg-rose-600 text-white text-sm font-bold">확인</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 토스트 메시지 컨테이너 -->
+        <div id="toast-container" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-[150] flex flex-col gap-2 items-center pointer-events-none"></div>
+
     </main>
 
     <script>
-        const MASTER_KEY = 'osaka_trip_master_db_v2';
-        const OLD_KEYS = ['osaka_trip_master_db', 'osaka_planner_final_v14'];
-
-        let tripData = [];
+        // 전역 변수
+        window.tripData = [];
         let currentFilter = 'all';
         let currentRegion = 'all';
 
+        // --- Auth & Init Helpers ---
+        function updateConnectionStatus(isConnected) {
+            const display = document.getElementById('display-trip-code');
+            if(!isConnected) display.innerText = "연결 끊김";
+        }
+
+        // --- UI Modal Controls ---
+        function openWelcomeModal() {
+            const m = document.getElementById('welcome-modal');
+            m.classList.remove('modal-hidden');
+            m.classList.add('modal-flex');
+            document.getElementById('trip-code-input').focus();
+        }
+
+        function closeWelcomeModal() {
+            const m = document.getElementById('welcome-modal');
+            m.classList.add('modal-hidden');
+            m.classList.remove('modal-flex');
+        }
+
+        function handleConnect() {
+            const code = document.getElementById('trip-code-input').value;
+            window.connectToTrip(code);
+        }
+
+        // Custom Confirm Modal
+        function showConfirm(title, msg, onOk) {
+            const m = document.getElementById('confirm-modal');
+            document.getElementById('confirm-title').innerText = title;
+            document.getElementById('confirm-msg').innerText = msg;
+            
+            const btnOk = document.getElementById('confirm-ok-btn');
+            const btnCancel = document.getElementById('confirm-cancel-btn');
+            
+            const cleanUp = () => {
+                m.classList.add('modal-hidden');
+                m.classList.remove('modal-flex');
+                btnOk.onclick = null;
+                btnCancel.onclick = null;
+            };
+
+            btnOk.onclick = () => {
+                onOk();
+                cleanUp();
+            };
+            btnCancel.onclick = cleanUp;
+
+            m.classList.remove('modal-hidden');
+            m.classList.add('modal-flex');
+        }
+
+        // Toast Message
+        function showToast(msg) {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            el.className = 'toast bg-stone-800 text-white text-xs px-4 py-2 rounded-full shadow-lg';
+            el.innerText = msg;
+            container.appendChild(el);
+            setTimeout(() => {
+                el.style.opacity = '0';
+                setTimeout(() => el.remove(), 300);
+            }, 2000);
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
-            loadData();
-            renderCards();
+            // Local Storage fallback or migration logic could go here
+            // But we rely on Firebase primarily now.
+            // renderCards() is called by Firestore listener
+            
             toggleFields();
             
             document.addEventListener('paste', function(e) {
                 if (document.getElementById('upload-mode').classList.contains('active')) {
                     handlePaste(e, processImageFile, 'file');
-                } else if (!document.getElementById('menu-modal').classList.contains('hidden')) {
+                } else if (!document.getElementById('menu-modal').classList.contains('modal-hidden')) {
                     handlePaste(e, processMenuFile, 'menu');
                 }
             });
@@ -305,46 +524,24 @@
             }
         }
 
-        // --- Data Handling ---
-        function loadData() {
-            let saved = localStorage.getItem(MASTER_KEY);
-            if (!saved) {
-                for (let key of OLD_KEYS) {
-                    let oldData = localStorage.getItem(key);
-                    if (oldData) {
-                        saved = oldData;
-                        localStorage.setItem(MASTER_KEY, oldData);
-                        break;
-                    }
-                }
-            }
-            if (saved) tripData = JSON.parse(saved);
-        }
-
-        function saveData() {
-            localStorage.setItem(MASTER_KEY, JSON.stringify(tripData));
-            renderCards();
-        }
-
         function goHome() {
             switchMode('view');
             filterCategory('all');
             window.scrollTo(0,0);
         }
 
-        // --- UI Control (Missing Functions Restored) ---
+        // --- UI Control ---
         function switchMode(mode) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById(mode + '-mode').classList.add('active');
             
-            // 버튼 상태 업데이트 (헤더)
             const btnView = document.getElementById('btn-view');
             const btnUpload = document.getElementById('btn-upload');
             
             if (mode === 'view') {
                 btnView.className = "text-xs bg-rose-600 text-white px-3 py-2 rounded-lg font-bold shadow transition";
                 btnUpload.className = "text-xs bg-white text-stone-600 border border-stone-300 px-3 py-2 rounded-lg font-bold shadow-sm transition hover:bg-stone-50";
-                renderCards(); // 뷰 모드로 갈 때 카드 갱신
+                window.renderCards();
             } else {
                 btnView.className = "text-xs bg-white text-stone-600 border border-stone-300 px-3 py-2 rounded-lg font-bold shadow-sm transition hover:bg-stone-50";
                 btnUpload.className = "text-xs bg-rose-600 text-white px-3 py-2 rounded-lg font-bold shadow transition";
@@ -354,9 +551,8 @@
 
         function filterCategory(category) {
             currentFilter = category;
-            currentRegion = 'all'; // 카테고리 변경 시 지역 필터 초기화
+            currentRegion = 'all';
             
-            // 버튼 UI 업데이트
             document.querySelectorAll('.cat-btn').forEach(btn => {
                 if ((category === 'all' && btn.textContent === '전체') || 
                     btn.textContent.includes(category)) {
@@ -366,12 +562,12 @@
                 }
             });
             
-            renderCards();
+            window.renderCards();
         }
 
         function filterRegion(region) {
             currentRegion = region;
-            renderCards();
+            window.renderCards();
         }
 
         // --- Upload/Edit Logic ---
@@ -392,8 +588,8 @@
             toggleFields();
         }
 
-        function editItem(id) {
-            const item = tripData.find(i => i.id == id);
+        window.editItem = function(id) {
+            const item = window.tripData.find(i => i.id == id);
             if (!item) return;
 
             document.getElementById('edit-id').value = item.id;
@@ -425,12 +621,11 @@
             document.getElementById('form-title').innerText = "내용 수정";
             document.getElementById('save-btn').innerHTML = '<i class="fa-solid fa-rotate"></i> 수정 완료';
             
-            // 화면 전환 및 스크롤
             switchMode('upload');
             window.scrollTo(0,0);
         }
 
-        function saveItem(e) {
+        window.saveItem = function(e) {
             e.preventDefault();
             const formData = new FormData(e.target);
             const editIdStr = formData.get('id');
@@ -443,7 +638,7 @@
             
             let existingItem = {};
             if (editIdStr) {
-                existingItem = tripData.find(i => i.id == editIdStr) || {};
+                existingItem = window.tripData.find(i => i.id == editIdStr) || {};
             }
 
             const itemData = {
@@ -464,40 +659,33 @@
             };
 
             if (editIdStr) {
-                const index = tripData.findIndex(i => i.id == editIdStr);
+                const index = window.tripData.findIndex(i => i.id == editIdStr);
                 if (index !== -1) {
-                    tripData[index] = itemData;
-                    alert("수정되었습니다.");
+                    window.tripData[index] = itemData;
+                    showToast("수정되었습니다.");
                 } else {
-                    tripData.push(itemData);
+                    window.tripData.push(itemData);
                 }
             } else {
-                tripData.push(itemData);
-                alert("저장되었습니다.");
+                window.tripData.push(itemData);
+                showToast("저장되었습니다.");
             }
 
-            saveData();
+            window.saveDataToCloud();
             switchMode('view');
         }
 
-        function deleteItem(id) {
-            if(confirm("삭제하시겠습니까?")) {
-                tripData = tripData.filter(i => i.id !== id);
-                saveData();
-            }
-        }
-
-        function clearAllData() {
-            if(confirm("모든 데이터를 삭제합니다.")) {
-                localStorage.removeItem(MASTER_KEY);
-                tripData = [];
-                renderCards();
-            }
+        window.deleteItem = function(id) {
+            showConfirm("삭제", "이 항목을 삭제하시겠습니까?", () => {
+                window.tripData = window.tripData.filter(i => i.id !== id);
+                window.saveDataToCloud();
+                showToast("삭제되었습니다.");
+            });
         }
 
         // --- Menu Image Logic ---
-        function openMenuModal(id) {
-            const item = tripData.find(i => i.id == id);
+        window.openMenuModal = function(id) {
+            const item = window.tripData.find(i => i.id == id);
             if(!item) return;
             
             document.getElementById('menu-target-id').value = id;
@@ -514,19 +702,19 @@
             }
             
             const modal = document.getElementById('menu-modal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
+            modal.classList.remove('modal-hidden');
+            modal.classList.add('modal-flex');
         }
 
-        function closeMenuModal() {
+        window.closeMenuModal = function() {
             const modal = document.getElementById('menu-modal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
+            modal.classList.add('modal-hidden');
+            modal.classList.remove('modal-flex');
             document.getElementById('menu-file-input').value = '';
             document.getElementById('menu-url-input').value = '';
         }
 
-        function processMenuFile(file) {
+        window.processMenuFile = function(file) {
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -549,25 +737,25 @@
             reader.readAsDataURL(file);
         }
 
-        function saveMenuImage() {
+        window.saveMenuImage = function() {
             const id = document.getElementById('menu-target-id').value;
             const preview = document.getElementById('menu-preview');
             
             if(preview.classList.contains('hidden') || !preview.src) {
-                alert("이미지를 등록해주세요.");
+                showToast("이미지를 등록해주세요.");
                 return;
             }
 
-            const index = tripData.findIndex(i => i.id == id);
+            const index = window.tripData.findIndex(i => i.id == id);
             if(index !== -1) {
-                tripData[index].menuImgData = preview.src;
-                saveData();
-                closeMenuModal();
+                window.tripData[index].menuImgData = preview.src;
+                window.saveDataToCloud();
+                window.closeMenuModal();
             }
         }
 
         // --- Render ---
-        function renderCards() {
+        window.renderCards = function() {
             const container = document.getElementById('card-container');
             const emptyState = document.getElementById('empty-state');
             const flightInfo = document.getElementById('flight-info');
@@ -576,9 +764,9 @@
 
             container.innerHTML = '';
 
-            let filtered = tripData;
+            let filtered = window.tripData;
             if (currentFilter !== 'all') {
-                filtered = tripData.filter(i => i.category === currentFilter);
+                filtered = window.tripData.filter(i => i.category === currentFilter);
             }
 
             const regions = [...new Set(filtered.map(i => i.region || i.origin).filter(Boolean))]; 
@@ -682,19 +870,19 @@
         }
 
         // --- Helpers ---
-        function openLightbox(src) {
+        window.openLightbox = function(src) {
             const lightbox = document.getElementById('lightbox');
             const img = document.getElementById('lightbox-img');
             img.src = src;
-            lightbox.classList.remove('hidden');
-            lightbox.classList.add('flex');
+            lightbox.classList.remove('modal-hidden');
+            lightbox.classList.add('modal-flex');
         }
-        function closeLightbox() {
+        window.closeLightbox = function() {
             const lightbox = document.getElementById('lightbox');
-            lightbox.classList.add('hidden');
-            lightbox.classList.remove('flex');
+            lightbox.classList.add('modal-hidden');
+            lightbox.classList.remove('modal-flex');
         }
-        function toggleFields() {
+        window.toggleFields = function() {
             const category = document.querySelector('input[name="category"]:checked').value;
             const groupStandard = document.getElementById('group-standard'); 
             const groupTransport = document.getElementById('group-transport');
@@ -706,17 +894,17 @@
             else if (category === '식당') { groupFood.style.display = 'grid'; } 
             else if (category === '쇼핑') { fieldReserve.style.display = 'none'; }
         }
-        function switchImgMode(mode) {
+        window.switchImgMode = function(mode) {
             const urlInput = document.getElementById('imgUrlField'); const fileInput = document.getElementById('imgFileField');
             const btnUrl = document.getElementById('btn-img-url'); const btnFile = document.getElementById('btn-img-file');
             if(mode === 'url') { urlInput.classList.remove('hidden'); fileInput.classList.add('hidden'); btnUrl.className = "text-[10px] px-3 py-1 bg-stone-800 text-white rounded-full"; btnFile.className = "text-[10px] px-3 py-1 bg-stone-200 text-stone-600 rounded-full"; } 
             else { urlInput.classList.add('hidden'); fileInput.classList.remove('hidden'); btnFile.className = "text-[10px] px-3 py-1 bg-stone-800 text-white rounded-full"; btnUrl.className = "text-[10px] px-3 py-1 bg-stone-200 text-stone-600 rounded-full"; }
         }
-        function previewImage(url) {
+        window.previewImage = function(url) {
             const preview = document.getElementById('preview-img');
             if(url) { preview.src = url; preview.classList.remove('hidden'); preview.nextElementSibling.classList.add('hidden'); }
         }
-        function processImageFile(file) {
+        window.processImageFile = function(file) {
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -740,7 +928,6 @@
             };
             reader.readAsDataURL(file);
         }
-        function handleFileSelect(event) { processImageFile(event.target.files[0]); }
     </script>
 </body>
 </html>
