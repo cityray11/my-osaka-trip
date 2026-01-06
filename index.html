@@ -71,7 +71,6 @@
             
             <!-- 1. 항공권 -->
             <div id="flight-info" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                <!-- 가는편 -->
                 <div class="flight-card bg-white p-4 rounded-xl shadow-sm border border-stone-100 flex flex-col justify-between h-32 relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-1.5 h-full bg-blue-500"></div>
                     <div class="flex justify-between items-center text-xs text-stone-400 mb-1 pl-2">
@@ -84,7 +83,6 @@
                     </div>
                     <div class="flex justify-between items-end mt-2 pl-2"><div class="text-xl font-bold text-blue-600">15:50</div><div class="text-xl font-bold text-stone-400">~ 17:35</div></div>
                 </div>
-                <!-- 오는편 -->
                 <div class="flight-card bg-white p-4 rounded-xl shadow-sm border border-stone-100 flex flex-col justify-between h-32 relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-1.5 h-full bg-rose-500"></div>
                     <div class="flex justify-between items-center text-xs text-stone-400 mb-1 pl-2">
@@ -121,9 +119,8 @@
                 </div>
             </div>
 
-            <!-- 3. 필터 (카테고리 + 지역 자동생성) -->
+            <!-- 3. 필터 -->
             <div class="sticky top-[60px] z-30 bg-stone-100 pb-2">
-                <!-- 카테고리 -->
                 <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                     <button onclick="filterCategory('all')" class="cat-btn active bg-stone-800 text-white px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm">전체</button>
                     <button onclick="filterCategory('식당')" class="cat-btn bg-white border border-stone-300 text-stone-600 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm">🍱 식당</button>
@@ -131,24 +128,19 @@
                     <button onclick="filterCategory('쇼핑')" class="cat-btn bg-white border border-stone-300 text-stone-600 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm">🛍️ 쇼핑</button>
                     <button onclick="filterCategory('교통')" class="cat-btn bg-white border border-stone-300 text-stone-600 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm">🚌 교통</button>
                 </div>
-                <!-- 지역 (자동 생성) -->
-                <div id="region-filters" class="flex gap-2 overflow-x-auto pt-1 pb-1 scrollbar-hide min-h-[30px]">
-                    <!-- JS로 채워짐 -->
-                </div>
+                <div id="region-filters" class="flex gap-2 overflow-x-auto pt-1 pb-1 scrollbar-hide min-h-[30px]"></div>
             </div>
 
-            <!-- 4. Empty State -->
+            <!-- 4. 카드 리스트 -->
             <div id="empty-state" class="hidden flex-col items-center justify-center py-12 text-center">
                 <div class="w-16 h-16 bg-stone-200 rounded-full flex items-center justify-center text-3xl mb-4 text-stone-400">📝</div>
                 <h3 class="text-lg font-bold text-stone-600">일정을 채워주세요</h3>
             </div>
 
-            <!-- 5. 카드 리스트 (2열 그리드) -->
-            <div id="card-container" class="grid grid-cols-2 gap-3 pb-10">
-                <!-- JS Generated -->
+            <div id="card-container" class="grid grid-cols-2 gap-4 pb-10">
+                <!-- JS로 생성됨 -->
             </div>
 
-            <!-- 6. 초기화 -->
             <div class="text-center pb-10">
                 <button onclick="clearAllData()" class="text-xs text-stone-400 underline hover:text-red-500">데이터 전체 삭제</button>
             </div>
@@ -156,16 +148,15 @@
 
         <!-- [UPLOAD MODE] -->
         <div id="upload-mode" class="tab-content">
-            <div class="bg-white rounded-2xl shadow-lg border border-stone-100 p-6 relative">
+            <div class="bg-white rounded-2xl shadow-lg border border-stone-100 p-6">
                 <h2 class="text-xl font-bold mb-6 text-stone-800 flex items-center gap-2">
                     <span class="w-1 h-6 bg-rose-500 rounded-full block"></span>
                     <span id="form-title">정보 입력</span>
                 </h2>
                 
                 <form id="trip-form" onsubmit="saveItem(event)" class="space-y-5">
-                    <input type="hidden" name="id" id="edit-id"> <!-- 수정용 ID -->
+                    <input type="hidden" name="id" id="edit-id">
 
-                    <!-- 카테고리 -->
                     <div class="grid grid-cols-4 gap-2">
                         <label class="cursor-pointer"><input type="radio" name="category" value="식당" class="peer sr-only" checked onchange="toggleFields()"><div class="text-center py-2 bg-stone-50 rounded-lg border-2 border-stone-100 peer-checked:bg-rose-50 peer-checked:text-rose-600 peer-checked:border-rose-500 text-xs font-bold transition">🍱 식당</div></label>
                         <label class="cursor-pointer"><input type="radio" name="category" value="관광" class="peer sr-only" onchange="toggleFields()"><div class="text-center py-2 bg-stone-50 rounded-lg border-2 border-stone-100 peer-checked:bg-blue-50 peer-checked:text-blue-600 peer-checked:border-blue-500 text-xs font-bold transition">📷 관광</div></label>
@@ -173,7 +164,6 @@
                         <label class="cursor-pointer"><input type="radio" name="category" value="교통" class="peer sr-only" onchange="toggleFields()"><div class="text-center py-2 bg-stone-50 rounded-lg border-2 border-stone-100 peer-checked:bg-green-50 peer-checked:text-green-600 peer-checked:border-green-500 text-xs font-bold transition">🚌 교통</div></label>
                     </div>
 
-                    <!-- 표준 입력 -->
                     <div id="group-standard">
                         <div class="space-y-3">
                             <div>
@@ -187,7 +177,6 @@
                         </div>
                     </div>
 
-                    <!-- 교통 전용 -->
                     <div id="group-transport" class="hidden p-4 bg-green-50 rounded-xl border border-green-100">
                         <div class="flex items-center gap-2">
                             <div class="flex-1">
@@ -202,13 +191,11 @@
                         </div>
                     </div>
 
-                    <!-- 설명 -->
                     <div>
                         <label class="block text-xs font-bold text-stone-500 mb-1">설명</label>
                         <textarea name="desc" id="input-desc" rows="3" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"></textarea>
                     </div>
 
-                    <!-- 식당 전용 -->
                     <div id="group-food" class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-bold text-stone-500 mb-1">대표 메뉴</label>
@@ -220,14 +207,12 @@
                         </div>
                     </div>
 
-                    <!-- 링크 -->
                     <div class="space-y-3">
                         <div id="field-mapLink"><input type="url" name="mapLink" id="input-map" placeholder="구글맵 링크" class="w-full pl-3 bg-stone-50 border border-stone-200 rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500"></div>
                         <div id="field-relatedLink"><input type="url" name="relatedLink" id="input-related" placeholder="관련 링크 (블로그 등)" class="w-full pl-3 bg-stone-50 border border-stone-200 rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500"></div>
                         <div id="field-reserveLink"><input type="url" name="reserveLink" id="input-reserve" placeholder="예약 링크" class="w-full pl-3 bg-stone-50 border border-stone-200 rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500"></div>
                     </div>
 
-                    <!-- 이미지 -->
                     <div class="border-t border-stone-100 pt-4">
                         <label class="block text-xs font-bold text-stone-500 mb-2">사진 등록 (붙여넣기 가능)</label>
                         <div class="flex gap-2 mb-2">
@@ -242,7 +227,7 @@
                             <span class="text-xs text-stone-400"><i class="fa-regular fa-paste"></i> Ctrl+V 로 붙여넣기</span>
                         </div>
                         <input type="hidden" name="finalImgData" id="final-img-data">
-                        <input type="hidden" id="existing-img-data"> <!-- 수정 시 기존 이미지 유지용 -->
+                        <input type="hidden" id="existing-img-data">
                     </div>
 
                     <button type="submit" id="save-btn" class="w-full bg-stone-800 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-stone-900 transition flex justify-center items-center gap-2 mt-4">
@@ -252,7 +237,6 @@
             </div>
         </div>
 
-        <!-- 이미지 라이트박스 -->
         <div id="lightbox" class="fixed inset-0 bg-black/95 z-[100] hidden items-center justify-center p-4 cursor-pointer" onclick="closeLightbox()">
             <img id="lightbox-img" class="max-w-full max-h-[90vh] object-contain rounded shadow-2xl" src="">
         </div>
@@ -272,9 +256,7 @@
             renderCards();
             toggleFields();
             
-            // 붙여넣기 이벤트 (이미지)
             document.addEventListener('paste', function(e) {
-                // 업로드 모드일 때만 작동
                 if (!document.getElementById('upload-mode').classList.contains('active')) return;
                 
                 const items = (e.clipboardData || e.originalEvent.clipboardData).items;
@@ -283,14 +265,13 @@
                     if (item.kind === 'file' && item.type.includes('image/')) {
                         const blob = item.getAsFile();
                         processImageFile(blob);
-                        // 파일 입력 모드로 자동 전환
                         switchImgMode('file');
                     }
                 }
             });
         });
 
-        // --- Data Handling ---
+        // --- Data ---
         function loadData() {
             let saved = localStorage.getItem(MASTER_KEY);
             if (!saved) {
@@ -317,7 +298,7 @@
             window.scrollTo(0,0);
         }
 
-        // --- Upload / Edit Logic ---
+        // --- Upload/Edit ---
         function initUploadMode() {
             resetForm();
             switchMode('upload');
@@ -358,7 +339,7 @@
                 document.getElementById('preview-img').src = item.imgData;
                 document.getElementById('preview-img').classList.remove('hidden');
                 document.getElementById('existing-img-data').value = item.imgData;
-                switchImgMode('file'); // 수정 시 이미지 있으면 파일모드로 보여줌 (미리보기 위해)
+                switchImgMode('file');
             } else {
                 document.getElementById('preview-img').classList.add('hidden');
             }
@@ -423,14 +404,12 @@
             }
         }
 
-        // --- UI Logic ---
+        // --- UI ---
         function switchMode(mode) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById(mode + '-mode').classList.add('active');
-            
             const viewBtn = document.getElementById('btn-view');
             const uploadBtn = document.getElementById('btn-upload');
-
             if(mode === 'view') {
                 viewBtn.className = "text-xs bg-rose-600 text-white px-3 py-2 rounded-lg font-bold shadow transition";
                 uploadBtn.className = "text-xs bg-white text-stone-600 border border-stone-300 px-3 py-2 rounded-lg font-bold shadow-sm transition hover:bg-stone-50";
@@ -507,7 +486,6 @@
 
             filtered.sort((a, b) => b.id - a.id);
 
-            // 항상 상단 정보 표시
             flightInfo.classList.remove('hidden');
             hotelInfo.classList.remove('hidden');
 
@@ -526,7 +504,7 @@
                 else if(item.category === '쇼핑') badgeClass = 'bg-yellow-100 text-yellow-600';
                 else if(item.category === '교통') badgeClass = 'bg-green-100 text-green-600';
 
-                // 이미지 (4:3 가로 비율)
+                // 이미지 (4:3 비율, 가로형)
                 let imgHtml = item.imgData ? 
                     `<div class="w-full aspect-[4/3] bg-stone-200 overflow-hidden relative cursor-pointer" onclick="openLightbox('${item.imgData}')">
                         <img src="${item.imgData}" class="w-full h-full object-cover transition hover:scale-105 duration-500">
@@ -537,12 +515,22 @@
                 if(item.category === '교통') {
                     contentHtml = `<div class="bg-green-50 p-2 rounded border border-green-100 mb-2"><div class="font-bold text-green-700 text-sm truncate">${item.origin}</div><div class="text-center text-green-400 text-xs py-1"><i class="fa-solid fa-arrow-down"></i></div><div class="font-bold text-green-700 text-sm truncate">${item.destination}</div></div>`;
                 } else {
+                    // 정보 박스 개선 (잘림 방지)
                     contentHtml = `
                     <div class="flex flex-wrap gap-1 mb-2">
-                        ${item.region ? `<span class="bg-stone-100 text-stone-500 text-[10px] px-1.5 py-0.5 rounded font-bold truncate max-w-full">${item.region}</span>` : ''}
-                        ${item.menu ? `<span class="bg-orange-50 text-orange-600 text-[10px] px-1.5 py-0.5 rounded font-bold truncate max-w-full">${item.menu}</span>` : ''}
+                        ${item.region ? `<span class="bg-stone-100 text-stone-500 text-[10px] px-1.5 py-0.5 rounded font-bold">${item.region}</span>` : ''}
                     </div>
-                    <h3 class="text-base font-bold text-stone-800 leading-tight mb-1 truncate">${item.name}</h3>`;
+                    <h3 class="text-base font-bold text-stone-800 leading-tight mb-2 line-clamp-2">${item.name}</h3>`;
+                }
+
+                // 메뉴/가격 박스
+                let detailBox = '';
+                if(item.category === '식당' && (item.menu || item.price)) {
+                    detailBox = `
+                    <div class="bg-stone-50 p-2 rounded border border-stone-100 text-xs mb-2">
+                        ${item.menu ? `<div class="mb-1"><span class="text-stone-400 font-bold block mb-0.5">MENU</span><span class="text-stone-700 font-bold break-words">${item.menu}</span></div>` : ''}
+                        ${item.price ? `<div><span class="text-stone-400 font-bold mr-1">PRICE</span><span class="text-stone-700 font-bold">${item.price}</span></div>` : ''}
+                    </div>`;
                 }
 
                 let mapBtn = (item.category !== '교통' && item.mapLink) ? `<a href="${item.mapLink}" target="_blank" class="flex-1 bg-white border border-stone-200 text-stone-500 py-2 rounded text-[10px] font-bold hover:bg-stone-50 text-center">지도</a>` : '';
@@ -551,7 +539,7 @@
 
                 let btnsHtml = '';
                 if(mapBtn || relatedBtn || reserveBtn) {
-                    btnsHtml = `<div class="flex gap-1 mt-3 pt-3 border-t border-stone-100">${mapBtn}${relatedBtn}${reserveBtn}</div>`;
+                    btnsHtml = `<div class="flex gap-1 mt-auto pt-2 border-t border-stone-100">${mapBtn}${relatedBtn}${reserveBtn}</div>`;
                 }
 
                 container.innerHTML += `
@@ -563,9 +551,10 @@
                     ${imgHtml}
                     <div class="p-3 flex-1 flex flex-col">
                         <div class="mb-1"><span class="text-[10px] font-bold ${badgeClass} px-1.5 py-0.5 rounded">${item.category}</span></div>
+                        ${contentHtml}
+                        ${detailBox}
                         <div class="flex-1">
-                            ${contentHtml}
-                            <p class="text-xs text-stone-400 line-clamp-2 mt-1">${item.desc || ''}</p>
+                            <p class="text-xs text-stone-400 line-clamp-2">${item.desc || ''}</p>
                         </div>
                         ${btnsHtml}
                     </div>
@@ -573,6 +562,7 @@
             });
         }
 
+        // --- Helpers ---
         function openLightbox(src) {
             const lightbox = document.getElementById('lightbox');
             const img = document.getElementById('lightbox-img');
@@ -580,13 +570,11 @@
             lightbox.classList.remove('hidden');
             lightbox.classList.add('flex');
         }
-
         function closeLightbox() {
             const lightbox = document.getElementById('lightbox');
             lightbox.classList.add('hidden');
             lightbox.classList.remove('flex');
         }
-
         function toggleFields() {
             const category = document.querySelector('input[name="category"]:checked').value;
             const groupStandard = document.getElementById('group-standard'); 
@@ -594,46 +582,21 @@
             const groupFood = document.getElementById('group-food');
             const fieldMap = document.getElementById('field-mapLink'); 
             const fieldReserve = document.getElementById('field-reserveLink');
-
-            groupStandard.style.display = 'block';
-            groupTransport.style.display = 'none';
-            groupFood.style.display = 'none';
-            fieldMap.style.display = 'block';
-            fieldReserve.style.display = 'block';
-
-            if (category === '교통') {
-                groupStandard.style.display = 'none';
-                groupTransport.style.display = 'block';
-                fieldMap.style.display = 'none'; 
-            } else if (category === '식당') {
-                groupFood.style.display = 'grid';
-            } else if (category === '쇼핑') {
-                fieldReserve.style.display = 'none'; 
-            }
+            groupStandard.style.display = 'block'; groupTransport.style.display = 'none'; groupFood.style.display = 'none'; fieldMap.style.display = 'block'; fieldReserve.style.display = 'block';
+            if (category === '교통') { groupStandard.style.display = 'none'; groupTransport.style.display = 'block'; fieldMap.style.display = 'none'; } 
+            else if (category === '식당') { groupFood.style.display = 'grid'; } 
+            else if (category === '쇼핑') { fieldReserve.style.display = 'none'; }
         }
-
         function switchImgMode(mode) {
-            const urlInput = document.getElementById('img-url-input');
-            const fileInput = document.getElementById('img-file-input');
-            const btnUrl = document.getElementById('btn-img-url');
-            const btnFile = document.getElementById('btn-img-file');
-
-            if(mode === 'url') {
-                urlInput.classList.remove('hidden'); fileInput.classList.add('hidden');
-                btnUrl.className = "text-[10px] px-3 py-1 bg-stone-800 text-white rounded-full";
-                btnFile.className = "text-[10px] px-3 py-1 bg-stone-200 text-stone-600 rounded-full";
-            } else {
-                urlInput.classList.add('hidden'); fileInput.classList.remove('hidden');
-                btnFile.className = "text-[10px] px-3 py-1 bg-stone-800 text-white rounded-full";
-                btnUrl.className = "text-[10px] px-3 py-1 bg-stone-200 text-stone-600 rounded-full";
-            }
+            const urlInput = document.getElementById('img-url-input'); const fileInput = document.getElementById('img-file-input');
+            const btnUrl = document.getElementById('btn-img-url'); const btnFile = document.getElementById('btn-img-file');
+            if(mode === 'url') { urlInput.classList.remove('hidden'); fileInput.classList.add('hidden'); btnUrl.className = "text-[10px] px-3 py-1 bg-stone-800 text-white rounded-full"; btnFile.className = "text-[10px] px-3 py-1 bg-stone-200 text-stone-600 rounded-full"; } 
+            else { urlInput.classList.add('hidden'); fileInput.classList.remove('hidden'); btnFile.className = "text-[10px] px-3 py-1 bg-stone-800 text-white rounded-full"; btnUrl.className = "text-[10px] px-3 py-1 bg-stone-200 text-stone-600 rounded-full"; }
         }
         function previewImage(url) {
             const preview = document.getElementById('preview-img');
             if(url) { preview.src = url; preview.classList.remove('hidden'); preview.nextElementSibling.classList.add('hidden'); }
         }
-        
-        // 이미지 처리 로직 (파일선택 + 붙여넣기 공통)
         function processImageFile(file) {
             if (!file) return;
             const reader = new FileReader();
@@ -642,7 +605,7 @@
                 img.src = e.target.result;
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 1000; // 해상도 살짝 높임
+                    const MAX_WIDTH = 1000;
                     let width = img.width; let height = img.height;
                     if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
                     canvas.width = width; canvas.height = height;
@@ -658,9 +621,9 @@
             };
             reader.readAsDataURL(file);
         }
+        function handleFileSelect(event) { processImageFile(event.target.files[0]); }
     </script>
 
-    <!-- 라이트박스 컨테이너 -->
     <div id="lightbox" class="fixed inset-0 bg-black/95 z-[100] hidden items-center justify-center p-4 cursor-pointer" onclick="closeLightbox()">
         <img id="lightbox-img" class="max-w-full max-h-[90vh] object-contain rounded shadow-2xl" src="">
     </div>
