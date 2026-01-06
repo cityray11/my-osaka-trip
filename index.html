@@ -11,7 +11,7 @@
     <!-- Firebase SDK (v11.6.1) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Firebase 설정
@@ -22,8 +22,10 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // *** 중요: 모든 접속자가 공유할 고정 ID ***
+        const FIXED_TRIP_ID = "osaka_public_shared_plan_v1";
+
         let currentUser = null;
-        let currentTripId = localStorage.getItem('last_trip_id') || null;
         let unsubscribe = null;
         let isAuthReady = false;
 
@@ -32,13 +34,17 @@
         window.auth = auth;
         window.appId = appId;
         
-        // 인증 및 초기화
+        // 인증 및 초기화 (수정됨: Custom Token 우선 사용)
         async function initAuth() {
             try {
-                await signInAnonymously(auth);
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
             } catch (error) {
                 console.error("Auth Error:", error);
-                showToast("로그인 오류 발생");
+                showToast("서버 연결 실패. 새로고침 해주세요.");
             }
         }
 
@@ -49,38 +55,23 @@
                 isAuthReady = true;
                 updateConnectionStatus(true);
                 
-                // 저장된 트립 ID가 있으면 자동 연결
-                if (currentTripId) {
-                    connectToTrip(currentTripId);
-                }
+                // 인증되자마자 고정된 여행 ID로 자동 연결
+                connectToTrip(FIXED_TRIP_ID);
             } else {
                 updateConnectionStatus(false);
                 isAuthReady = false;
             }
         });
 
-        // 여행 연결 함수
+        // 여행 연결 함수 (자동 호출됨)
         window.connectToTrip = function(tripId) {
-            if (!isAuthReady) {
-                showToast("서버 연결 중입니다. 잠시만 기다려주세요.");
-                return;
-            }
-            if (!tripId) {
-                showToast("여행 코드를 입력해주세요.");
-                return;
-            }
-
-            // 기존 구독 해제
+            if (!currentUser) return; // 유저 없으면 중단
             if (unsubscribe) unsubscribe();
 
-            tripId = tripId.trim();
-            currentTripId = tripId;
-            localStorage.setItem('last_trip_id', tripId);
+            const statusEl = document.getElementById('sync-status');
+            if(statusEl) statusEl.innerHTML = '<i class="fa-solid fa-rotate fa-spin"></i> 데이터 불러오는 중...';
 
-            document.getElementById('display-trip-code').innerText = tripId;
-            closeWelcomeModal();
-            showToast(`'${tripId}' 여행에 접속했습니다.`);
-
+            // 경로 규칙 준수: artifacts/{appId}/public/data/{collectionName}/{docId}
             const tripRef = doc(db, 'artifacts', appId, 'public', 'data', 'osaka_trips', tripId);
 
             unsubscribe = onSnapshot(tripRef, (docSnap) => {
@@ -89,35 +80,41 @@
                     if (data.items) {
                         window.tripData = data.items;
                         window.renderCards();
+                        if(statusEl) statusEl.innerHTML = '<i class="fa-solid fa-check text-green-400"></i> 동기화 완료';
                     }
                 } else {
-                    // 클라우드에 데이터가 없음 (새로운 여행 코드)
-                    // 만약 로컬에 기존 데이터(legacy)가 있다면, 이를 클라우드로 업로드하여 마이그레이션
+                    // 데이터가 아직 없으면 (최초 실행)
+                    // 로컬에 기존 데이터가 있다면 업로드, 아니면 빈 배열
                     if (window.tripData && window.tripData.length > 0) {
-                        showToast("기존 데이터를 클라우드에 업로드합니다.");
                         saveDataToCloud(); 
                     } else {
-                        // 데이터가 없으면 빈 상태
                         window.tripData = [];
                         window.renderCards();
+                        if(statusEl) statusEl.innerHTML = '데이터 없음 (등록 필요)';
                     }
                 }
             }, (error) => {
                 console.error("Sync Error:", error);
-                showToast("데이터 동기화 실패. 인터넷을 확인하세요.");
+                // 권한 에러인지 확인
+                if (error.code === 'permission-denied') {
+                    showToast("권한 오류: 페이지를 새로고침 해주세요.");
+                } else {
+                    showToast("데이터 동기화 실패.");
+                }
+                if(statusEl) statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-red-400"></i> 연결 실패';
             });
         };
 
         // 데이터 저장 함수
         window.saveDataToCloud = async function() {
-            if (!currentUser || !currentTripId) {
-                // 아직 클라우드 모드가 아니면 로컬에는 저장이 안되므로(기존 키 사용X), 
-                // 여기서는 아무것도 안하거나 경고를 줄 수 있음. 
-                // 하지만 사용성을 위해 '여행 시작하기'를 유도하는 로직이 있으면 좋음.
-                return;
-            }
+            if (!currentUser) return;
 
-            const tripRef = doc(db, 'artifacts', appId, 'public', 'data', 'osaka_trips', currentTripId);
+            const tripRef = doc(db, 'artifacts', appId, 'public', 'data', 'osaka_trips', FIXED_TRIP_ID);
+            
+            // 저장 중 상태 표시
+            const statusEl = document.getElementById('sync-status');
+            if(statusEl) statusEl.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> 저장 중...';
+
             try {
                 await setDoc(tripRef, {
                     items: window.tripData,
@@ -125,6 +122,7 @@
                     updatedBy: currentUser.uid
                 }, { merge: true });
                 console.log("Saved successfully");
+                // 저장이 완료되면 onSnapshot이 다시 트리거되어 '동기화 완료'로 바뀝니다.
             } catch (error) {
                 console.error("Save Error:", error);
                 showToast("저장 실패! 다시 시도해주세요.");
@@ -142,7 +140,7 @@
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         
-        #lightbox, #menu-modal, #welcome-modal, #confirm-modal { transition: opacity 0.3s ease; }
+        #lightbox, #menu-modal, #confirm-modal { transition: opacity 0.3s ease; }
         .modal-hidden { opacity: 0; pointer-events: none; }
         .modal-flex { opacity: 1; pointer-events: auto; display: flex; }
 
@@ -179,12 +177,14 @@
     <header class="bg-white sticky top-0 z-40 shadow-sm border-b border-stone-200">
         <div class="max-w-3xl mx-auto px-4 py-3 flex justify-between items-center">
             <h1 class="text-lg font-bold text-rose-600 flex items-center gap-2 cursor-pointer hover:opacity-80 transition" onclick="goHome()">
-                <i class="fa-solid fa-cloud"></i> <span id="display-trip-code" class="text-stone-800 text-sm font-normal bg-stone-100 px-2 py-1 rounded">접속중...</span>
+                <i class="fa-solid fa-earth-asia"></i> Osaka Plan
             </h1>
-            <div class="flex gap-2">
-                <button onclick="openWelcomeModal()" class="text-xs bg-stone-800 text-white px-3 py-2 rounded-lg font-bold shadow-sm transition hover:bg-stone-700">
-                    <i class="fa-solid fa-users"></i> 공유
-                </button>
+            <div class="flex gap-2 items-center">
+                <!-- 상태 표시 -->
+                <span id="sync-status" class="text-[10px] text-stone-400 mr-2 hidden sm:block">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> 연결 중...
+                </span>
+
                 <button onclick="switchMode('view')" id="btn-view" class="text-xs bg-rose-600 text-white px-3 py-2 rounded-lg font-bold shadow transition">
                     <i class="fa-solid fa-list"></i> 일정
                 </button>
@@ -192,6 +192,20 @@
                     <i class="fa-solid fa-plus"></i> 등록
                 </button>
             </div>
+        </div>
+        <!-- 모바일용 상태 표시 (헤더 아래) -->
+        <div class="sm:hidden bg-stone-50 border-b border-stone-100 py-1 text-center">
+             <span id="sync-status-mobile" class="text-[10px] text-stone-400">
+                 <script>
+                     // 상태 텍스트 연동 (단순화)
+                     setInterval(() => {
+                         const main = document.getElementById('sync-status');
+                         const mob = document.getElementById('sync-status-mobile');
+                         if(main && mob) mob.innerHTML = main.innerHTML;
+                     }, 500);
+                 </script>
+                 연결 중...
+             </span>
         </div>
     </header>
 
@@ -276,7 +290,7 @@
             </div>
             
             <div class="text-center pb-10 text-[10px] text-stone-400">
-                <p>클라우드에 안전하게 저장 중입니다 <i class="fa-solid fa-check text-green-500"></i></p>
+                <p>클라우드 동기화 켜짐 (공유 모드) <i class="fa-solid fa-check text-green-500"></i></p>
             </div>
         </div>
 
@@ -401,26 +415,7 @@
             </div>
         </div>
 
-        <!-- 여행 코드 입력 (환영) 모달 -->
-        <div id="welcome-modal" class="fixed inset-0 bg-black/80 z-[120] modal-hidden items-center justify-center p-4 flex">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
-                <div class="w-12 h-12 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 text-rose-600 text-xl">
-                    <i class="fa-solid fa-plane-departure"></i>
-                </div>
-                <h2 class="text-xl font-bold mb-2 text-stone-800">여행을 시작합니다</h2>
-                <p class="text-xs text-stone-500 mb-6 leading-relaxed">
-                    가족들과 공유할<br>
-                    <strong>여행 코드(암호)</strong>를 입력해주세요.
-                </p>
-                <input type="text" id="trip-code-input" placeholder="예: 우리가족오사카2026" class="w-full bg-stone-50 border border-stone-300 rounded-xl p-3 text-center font-bold mb-4 focus:outline-none focus:ring-2 focus:ring-rose-500 text-stone-800 uppercase" onkeypress="if(event.key === 'Enter') handleConnect()">
-                <button onclick="handleConnect()" class="w-full bg-rose-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-rose-700 transition mb-3">
-                    시작하기
-                </button>
-                <p class="text-[10px] text-stone-400">가족에게도 이 코드를 알려주세요!</p>
-            </div>
-        </div>
-
-        <!-- 확인(Confirm) 모달 대체 -->
+        <!-- 확인(Confirm) 모달 -->
         <div id="confirm-modal" class="fixed inset-0 bg-black/50 z-[130] modal-hidden items-center justify-center p-4 flex">
             <div class="bg-white rounded-xl shadow-lg w-full max-w-xs p-5 text-center">
                 <h3 class="font-bold text-lg mb-2" id="confirm-title">확인</h3>
@@ -445,27 +440,7 @@
 
         // --- Auth & Init Helpers ---
         function updateConnectionStatus(isConnected) {
-            const display = document.getElementById('display-trip-code');
-            if(!isConnected) display.innerText = "연결 끊김";
-        }
-
-        // --- UI Modal Controls ---
-        function openWelcomeModal() {
-            const m = document.getElementById('welcome-modal');
-            m.classList.remove('modal-hidden');
-            m.classList.add('modal-flex');
-            document.getElementById('trip-code-input').focus();
-        }
-
-        function closeWelcomeModal() {
-            const m = document.getElementById('welcome-modal');
-            m.classList.add('modal-hidden');
-            m.classList.remove('modal-flex');
-        }
-
-        function handleConnect() {
-            const code = document.getElementById('trip-code-input').value;
-            window.connectToTrip(code);
+            // 헤더의 상태 아이콘 등으로 대체
         }
 
         // Custom Confirm Modal
@@ -753,7 +728,7 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                    const preview = document.getElementById('menu-preview');
+                    const preview = document.getElementById('preview-img');
                     preview.src = dataUrl;
                     preview.classList.remove('hidden');
                 }
