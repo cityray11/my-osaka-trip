@@ -71,6 +71,7 @@
             
             <!-- 1. 항공권 -->
             <div id="flight-info" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                <!-- 가는편 -->
                 <div class="flight-card bg-white p-4 rounded-xl shadow-sm border border-stone-100 flex flex-col justify-between h-32 relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-1.5 h-full bg-blue-500"></div>
                     <div class="flex justify-between items-center text-xs text-stone-400 mb-1 pl-2">
@@ -83,6 +84,7 @@
                     </div>
                     <div class="flex justify-between items-end mt-2 pl-2"><div class="text-xl font-bold text-blue-600">15:50</div><div class="text-xl font-bold text-stone-400">~ 17:35</div></div>
                 </div>
+                <!-- 오는편 -->
                 <div class="flight-card bg-white p-4 rounded-xl shadow-sm border border-stone-100 flex flex-col justify-between h-32 relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-1.5 h-full bg-rose-500"></div>
                     <div class="flex justify-between items-center text-xs text-stone-400 mb-1 pl-2">
@@ -244,8 +246,8 @@
     </main>
 
     <script>
-        const MASTER_KEY = 'osaka_trip_master_db';
-        const OLD_KEYS = ['osaka_planner_final_v14', 'osaka_planner_final_v13'];
+        const MASTER_KEY = 'osaka_trip_master_db_v2'; // 키 변경하여 충돌 방지 및 안전한 로드
+        const OLD_KEYS = ['osaka_trip_master_db', 'osaka_planner_final_v14', 'osaka_planner_final_v13'];
 
         let tripData = [];
         let currentFilter = 'all';
@@ -258,7 +260,6 @@
             
             document.addEventListener('paste', function(e) {
                 if (!document.getElementById('upload-mode').classList.contains('active')) return;
-                
                 const items = (e.clipboardData || e.originalEvent.clipboardData).items;
                 for (let index in items) {
                     const item = items[index];
@@ -274,12 +275,13 @@
         // --- Data ---
         function loadData() {
             let saved = localStorage.getItem(MASTER_KEY);
+            // 데이터 마이그레이션 (이전 데이터 복구)
             if (!saved) {
                 for (let key of OLD_KEYS) {
                     let oldData = localStorage.getItem(key);
                     if (oldData) {
                         saved = oldData;
-                        localStorage.setItem(MASTER_KEY, oldData);
+                        localStorage.setItem(MASTER_KEY, oldData); // 새 키로 저장
                         break;
                     }
                 }
@@ -317,11 +319,14 @@
         }
 
         function editItem(id) {
-            const item = tripData.find(i => i.id === id);
+            // ID 타입 보정 (문자열일 경우를 대비해 느슨한 비교 혹은 변환)
+            const item = tripData.find(i => i.id == id);
             if (!item) return;
 
             document.getElementById('edit-id').value = item.id;
-            document.querySelector(`input[name="category"][value="${item.category}"]`).checked = true;
+            // 카테고리 체크
+            const radio = document.querySelector(`input[name="category"][value="${item.category}"]`);
+            if (radio) radio.checked = true;
             toggleFields();
 
             document.getElementById('input-region').value = item.region || '';
@@ -335,13 +340,15 @@
             document.getElementById('input-related').value = item.relatedLink || '';
             document.getElementById('input-reserve').value = item.reserveLink || '';
 
+            // 이미지 복원
             if (item.imgData) {
                 document.getElementById('preview-img').src = item.imgData;
                 document.getElementById('preview-img').classList.remove('hidden');
                 document.getElementById('existing-img-data').value = item.imgData;
-                switchImgMode('file');
+                switchImgMode('file'); 
             } else {
                 document.getElementById('preview-img').classList.add('hidden');
+                document.getElementById('existing-img-data').value = '';
             }
 
             document.getElementById('form-title').innerText = "내용 수정";
@@ -352,8 +359,9 @@
         function saveItem(e) {
             e.preventDefault();
             const formData = new FormData(e.target);
-            const editId = formData.get('id');
+            const editIdStr = formData.get('id'); // string
             
+            // 이미지 우선순위: 새 파일/URL > 기존 이미지
             let finalImg = document.getElementById('final-img-data').value;
             if(!finalImg) finalImg = document.getElementById('imgUrlField').value;
             if(!finalImg) finalImg = document.getElementById('existing-img-data').value;
@@ -361,7 +369,8 @@
             const category = formData.get('category');
             
             const itemData = {
-                id: editId ? parseInt(editId) : Date.now(),
+                // ID가 있으면 기존 ID(숫자) 유지, 없으면 새 ID 생성
+                id: editIdStr ? parseInt(editIdStr) : Date.now(),
                 category: category,
                 desc: formData.get('desc'),
                 reserveLink: formData.get('reserveLink'),
@@ -376,11 +385,19 @@
                 price: category === '식당' ? formData.get('price') : null,
             };
 
-            if (editId) {
-                const index = tripData.findIndex(i => i.id === parseInt(editId));
-                if (index !== -1) tripData[index] = itemData;
-                alert("수정되었습니다.");
+            if (editIdStr) {
+                // 수정 모드: ID로 인덱스 찾아서 교체
+                const index = tripData.findIndex(i => i.id == editIdStr);
+                if (index !== -1) {
+                    tripData[index] = itemData;
+                    alert("수정되었습니다.");
+                } else {
+                    // 혹시 모를 에러 방지용 (ID 못 찾으면 신규 추가)
+                    tripData.push(itemData);
+                    alert("새 항목으로 저장되었습니다.");
+                }
             } else {
+                // 신규 저장
                 tripData.push(itemData);
                 alert("저장되었습니다.");
             }
@@ -404,7 +421,7 @@
             }
         }
 
-        // --- UI ---
+        // --- UI Logic ---
         function switchMode(mode) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById(mode + '-mode').classList.add('active');
@@ -486,6 +503,7 @@
 
             filtered.sort((a, b) => b.id - a.id);
 
+            // 항상 상단 정보 표시
             flightInfo.classList.remove('hidden');
             hotelInfo.classList.remove('hidden');
 
@@ -520,15 +538,15 @@
                     <div class="flex flex-wrap gap-1 mb-2">
                         ${item.region ? `<span class="bg-stone-100 text-stone-500 text-[10px] px-1.5 py-0.5 rounded font-bold">${item.region}</span>` : ''}
                     </div>
-                    <h3 class="text-base font-bold text-stone-800 leading-tight mb-2 line-clamp-2">${item.name}</h3>`;
+                    <h3 class="text-base font-bold text-stone-800 leading-tight mb-2 line-clamp-2 h-10">${item.name}</h3>`;
                 }
 
-                // 메뉴/가격 박스
+                // 메뉴/가격 박스 (줄바꿈 허용)
                 let detailBox = '';
                 if(item.category === '식당' && (item.menu || item.price)) {
                     detailBox = `
                     <div class="bg-stone-50 p-2 rounded border border-stone-100 text-xs mb-2">
-                        ${item.menu ? `<div class="mb-1"><span class="text-stone-400 font-bold block mb-0.5">MENU</span><span class="text-stone-700 font-bold break-words">${item.menu}</span></div>` : ''}
+                        ${item.menu ? `<div class="mb-1"><span class="text-stone-400 font-bold block mb-0.5">MENU</span><span class="text-stone-700 font-bold whitespace-normal break-words">${item.menu}</span></div>` : ''}
                         ${item.price ? `<div><span class="text-stone-400 font-bold mr-1">PRICE</span><span class="text-stone-700 font-bold">${item.price}</span></div>` : ''}
                     </div>`;
                 }
@@ -624,6 +642,7 @@
         function handleFileSelect(event) { processImageFile(event.target.files[0]); }
     </script>
 
+    <!-- 라이트박스 컨테이너 -->
     <div id="lightbox" class="fixed inset-0 bg-black/95 z-[100] hidden items-center justify-center p-4 cursor-pointer" onclick="closeLightbox()">
         <img id="lightbox-img" class="max-w-full max-h-[90vh] object-contain rounded shadow-2xl" src="">
     </div>
