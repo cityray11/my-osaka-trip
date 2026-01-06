@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2026 오사카/교토 맞춤 플래너</title>
+    <title>2026 오사카/교토 맞춤 플래너 (Final)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -14,9 +14,12 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        input::-webkit-calendar-picker-indicator { opacity: 0.5; cursor: pointer; }
         
-        /* 보딩패스 스타일 */
+        /* 라이트박스 애니메이션 */
+        #lightbox { transition: opacity 0.3s ease; }
+        #lightbox.hidden { opacity: 0; pointer-events: none; }
+        #lightbox.flex { opacity: 1; pointer-events: auto; }
+
         .flight-card {
             background-image: radial-gradient(circle at 0 50%, transparent 10px, #fff 11px),
                               radial-gradient(circle at 100% 50%, transparent 10px, #fff 11px);
@@ -28,9 +31,8 @@
 </head>
 <body class="bg-stone-100 text-stone-800 pb-24">
 
-    <!-- 자동완성 데이터리스트 -->
+    <!-- 자동완성 데이터 -->
     <datalist id="location-list">
-        <option value="간사이 공항 (KIX)">
         <option value="오사카 우메다">
         <option value="오사카 난바/도톤보리">
         <option value="오사카 신사이바시">
@@ -38,29 +40,25 @@
         <option value="유니버셜 스튜디오 (USJ)">
         <option value="교토 아라시야마">
         <option value="교토 가와라마치">
-        <option value="교토 청수사 (기요미즈데라)">
+        <option value="교토 청수사">
         <option value="교토 기온 거리">
-        <option value="교토 후시미 이나리">
-        <option value="고베 산노미야">
-        <option value="나라 사슴공원">
+        <option value="간사이 공항">
     </datalist>
 
     <!-- 헤더 -->
-    <header class="bg-white sticky top-0 z-50 shadow-sm border-b border-stone-200">
+    <header class="bg-white sticky top-0 z-40 shadow-sm border-b border-stone-200">
         <div class="max-w-3xl mx-auto px-4 py-3 flex justify-between items-center">
-            <!-- 홈 버튼 -->
             <h1 class="text-lg font-bold text-rose-600 flex items-center gap-2 cursor-pointer hover:opacity-80 transition" onclick="goHome()">
                 <i class="fa-solid fa-map"></i> Osaka
             </h1>
             <div class="flex gap-2">
-                <!-- 비용 버튼 (구글 시트 새창 열기) -->
-                <a href="https://docs.google.com/spreadsheets/d/14w6schJSDujTsJbb6BhCdYpbiOjt49kw8gntE3wiIuk/edit?usp=sharing" target="_blank" class="text-xs bg-white text-stone-600 border border-stone-300 px-4 py-2 rounded-lg font-bold shadow-sm transition hover:bg-stone-50 flex items-center gap-1">
+                <a href="https://docs.google.com/spreadsheets/d/14w6schJSDujTsJbb6BhCdYpbiOjt49kw8gntE3wiIuk/edit?usp=sharing" target="_blank" class="text-xs bg-white text-stone-600 border border-stone-300 px-3 py-2 rounded-lg font-bold shadow-sm transition hover:bg-stone-50 flex items-center gap-1">
                     <i class="fa-solid fa-won-sign"></i> 비용
                 </a>
-                <button onclick="switchMode('view')" id="btn-view" class="text-xs bg-rose-600 text-white px-4 py-2 rounded-lg font-bold shadow transition">
+                <button onclick="switchMode('view')" id="btn-view" class="text-xs bg-rose-600 text-white px-3 py-2 rounded-lg font-bold shadow transition">
                     <i class="fa-solid fa-list"></i> 일정
                 </button>
-                <button onclick="switchMode('upload')" id="btn-upload" class="text-xs bg-white text-stone-600 border border-stone-300 px-4 py-2 rounded-lg font-bold shadow-sm transition hover:bg-stone-50">
+                <button onclick="initUploadMode()" id="btn-upload" class="text-xs bg-white text-stone-600 border border-stone-300 px-3 py-2 rounded-lg font-bold shadow-sm transition hover:bg-stone-50">
                     <i class="fa-solid fa-plus"></i> 등록
                 </button>
             </div>
@@ -72,112 +70,87 @@
         <!-- [VIEW MODE] -->
         <div id="view-mode" class="tab-content active">
             
-            <!-- 0-1. 항공권 정보 -->
+            <!-- 1. 항공권 -->
             <div id="flight-info" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                <!-- 가는 편 -->
+                <!-- 가는편 -->
                 <div class="flight-card bg-white p-4 rounded-xl shadow-sm border border-stone-100 flex flex-col justify-between h-32 relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-                    <div class="flex justify-between items-center text-xs text-stone-400 mb-1">
-                        <span class="font-bold text-blue-600"><i class="fa-solid fa-plane-departure"></i> 가는 편</span>
-                        <span>3.29 (일)</span>
+                    <div class="absolute top-0 left-0 w-1.5 h-full bg-blue-500"></div>
+                    <div class="flex justify-between items-center text-xs text-stone-400 mb-1 pl-2">
+                        <span class="font-bold text-blue-600"><i class="fa-solid fa-plane-departure"></i> 가는 편</span><span>3.29 (일)</span>
                     </div>
-                    <div class="flex justify-between items-center">
-                        <div class="text-center">
-                            <span class="block text-2xl font-black text-stone-800">CJJ</span>
-                            <span class="text-xs text-stone-500">청주</span>
-                        </div>
-                        <div class="flex-1 px-2 text-center">
-                            <div class="text-[10px] text-stone-400">1h 45m</div>
-                            <div class="w-full h-[1px] bg-stone-300 relative my-1">
-                                <i class="fa-solid fa-plane absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-stone-300 text-xs"></i>
-                            </div>
-                            <div class="text-[10px] text-stone-400">직항</div>
-                        </div>
-                        <div class="text-center">
-                            <span class="block text-2xl font-black text-stone-800">KIX</span>
-                            <span class="text-xs text-stone-500">오사카</span>
-                        </div>
+                    <div class="flex justify-between items-center pl-2">
+                        <div class="text-center"><span class="block text-2xl font-black text-stone-800">CJJ</span><span class="text-xs text-stone-500">청주</span></div>
+                        <div class="flex-1 px-4 text-center"><div class="text-[10px] text-stone-400">1h 45m</div><div class="w-full h-[1px] bg-stone-300 relative my-1"><i class="fa-solid fa-plane absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-stone-300 text-xs"></i></div><div class="text-[10px] text-stone-400">직항</div></div>
+                        <div class="text-center"><span class="block text-2xl font-black text-stone-800">KIX</span><span class="text-xs text-stone-500">오사카</span></div>
                     </div>
-                    <div class="flex justify-between items-end mt-2">
-                        <div class="text-lg font-bold text-blue-600">15:50</div>
-                        <div class="text-lg font-bold text-stone-400">~ 17:35</div>
-                    </div>
+                    <div class="flex justify-between items-end mt-2 pl-2"><div class="text-xl font-bold text-blue-600">15:50</div><div class="text-xl font-bold text-stone-400">~ 17:35</div></div>
                 </div>
-
-                <!-- 오는 편 -->
+                <!-- 오는편 -->
                 <div class="flight-card bg-white p-4 rounded-xl shadow-sm border border-stone-100 flex flex-col justify-between h-32 relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
-                    <div class="flex justify-between items-center text-xs text-stone-400 mb-1">
-                        <span class="font-bold text-rose-600"><i class="fa-solid fa-plane-arrival"></i> 오는 편</span>
-                        <span>3.31 (화)</span>
+                    <div class="absolute top-0 left-0 w-1.5 h-full bg-rose-500"></div>
+                    <div class="flex justify-between items-center text-xs text-stone-400 mb-1 pl-2">
+                        <span class="font-bold text-rose-600"><i class="fa-solid fa-plane-arrival"></i> 오는 편</span><span>3.31 (화)</span>
                     </div>
-                    <div class="flex justify-between items-center">
-                        <div class="text-center">
-                            <span class="block text-2xl font-black text-stone-800">KIX</span>
-                            <span class="text-xs text-stone-500">오사카</span>
-                        </div>
-                        <div class="flex-1 px-2 text-center">
-                            <div class="text-[10px] text-stone-400">2h 05m</div>
-                            <div class="w-full h-[1px] bg-stone-300 relative my-1">
-                                <i class="fa-solid fa-plane absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-stone-300 text-xs rotate-180"></i>
-                            </div>
-                            <div class="text-[10px] text-stone-400">직항</div>
-                        </div>
-                        <div class="text-center">
-                            <span class="block text-2xl font-black text-stone-800">ICN</span>
-                            <span class="text-xs text-stone-500">인천</span>
-                        </div>
+                    <div class="flex justify-between items-center pl-2">
+                        <div class="text-center"><span class="block text-2xl font-black text-stone-800">KIX</span><span class="text-xs text-stone-500">오사카</span></div>
+                        <div class="flex-1 px-4 text-center"><div class="text-[10px] text-stone-400">2h 05m</div><div class="w-full h-[1px] bg-stone-300 relative my-1"><i class="fa-solid fa-plane absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-stone-300 text-xs rotate-180"></i></div><div class="text-[10px] text-stone-400">직항</div></div>
+                        <div class="text-center"><span class="block text-2xl font-black text-stone-800">ICN</span><span class="text-xs text-stone-500">인천</span></div>
                     </div>
-                    <div class="flex justify-between items-end mt-2">
-                        <div class="text-lg font-bold text-rose-600">22:00</div>
-                        <div class="text-lg font-bold text-stone-400">~ 00:05 (+1)</div>
-                    </div>
+                    <div class="flex justify-between items-end mt-2 pl-2"><div class="text-xl font-bold text-rose-600">22:00</div><div class="text-xl font-bold text-stone-400">~ 00:05 <span class="text-xs">+1</span></div></div>
                 </div>
             </div>
 
-            <!-- 0-2. 고정된 숙소 정보 -->
-            <div id="hotel-info" class="bg-white rounded-xl shadow-md overflow-hidden mb-6 border border-stone-100 flex flex-row h-auto md:h-44 relative">
-                <div class="w-1/3 md:w-40 relative bg-stone-200 group">
-                    <img src="./hotel_main.jpg" onerror="this.src='https://placehold.co/400x600?text=Hotel'" class="absolute inset-0 w-full h-full object-cover">
-                    <div class="absolute top-0 left-0 bg-purple-600 text-white text-[10px] font-bold px-2 py-1 rounded-br-lg shadow-sm z-10">Base Camp</div>
+            <!-- 2. 숙소 -->
+            <div id="hotel-info" class="bg-white rounded-xl shadow-md overflow-hidden mb-6 border border-stone-100 flex flex-row h-auto relative">
+                <div class="w-1/3 md:w-40 relative bg-stone-200 group min-h-[160px]">
+                    <img src="./hotel_main.jpg" onerror="this.src='https://placehold.co/400x600?text=Hotel'" class="absolute inset-0 w-full h-full object-cover" onclick="openLightbox(this.src)">
+                    <div class="absolute top-0 left-0 bg-purple-600 text-white text-[10px] font-bold px-2 py-1 rounded-br-lg shadow-sm z-10 pointer-events-none">Base Camp</div>
                 </div>
                 <div class="flex-1 p-4 flex flex-col justify-between">
                     <div>
                         <h2 class="font-bold text-lg leading-tight text-stone-800">호텔 엘세레이네 오사카</h2>
-                        <p class="text-[10px] text-stone-400 font-medium mb-2 uppercase tracking-wide">Hotel Elsereine Osaka</p>
-                        <div class="flex flex-wrap gap-y-1 gap-x-4 text-xs text-stone-600 bg-stone-50 p-2 rounded-lg border border-stone-100">
-                            <div class="flex items-center gap-1"><i class="fa-regular fa-calendar text-purple-400"></i><span class="font-bold">3.29(일) - 3.31(화)</span></div>
-                            <div class="flex items-center gap-3"><span><i class="fa-solid fa-arrow-right-to-bracket text-stone-400"></i> IN 15:00</span><span><i class="fa-solid fa-arrow-right-from-bracket text-stone-400"></i> OUT 11:00</span></div>
+                        <p class="text-[10px] text-stone-400 font-medium mb-3 uppercase tracking-wide">Hotel Elsereine Osaka</p>
+                        <div class="flex flex-wrap gap-2 text-xs text-stone-600">
+                            <div class="flex items-center gap-1 bg-stone-50 px-2 py-1 rounded border border-stone-100"><i class="fa-regular fa-calendar text-purple-400"></i><span class="font-bold">3.29 - 3.31</span></div>
+                            <div class="flex items-center gap-2 bg-stone-50 px-2 py-1 rounded border border-stone-100"><span>IN 15:00</span><span class="text-stone-300">|</span><span>OUT 11:00</span></div>
                         </div>
                     </div>
-                    <div class="mt-3 flex justify-end gap-2">
+                    <div class="mt-4 flex justify-end gap-2">
                         <a href="https://www.google.com/travel/search?ts=CAESCgoCCAMKAggDEAAaYwpFEkMyJTB4NjAwMGU2ZjI2YjA1YzA4OToweGJhNTQ5OTUyOWQ4MTY1YWI6Gu2YuO2FlCDsl5jshLjrnoAg7Jik7IKs7Lm0EhoSFAoHCOoPEAEYDBIHCOoPEAEYDRgBMgIQACoHCgU6A0tSVw&qs=CAEyKENob0lxOHVGN0ttcXBxcTZBUm9OTDJjdk1URmlObk51ZG1oaVl4QUI4AkIJCatlgZ1SmVS6QgkJq2WBnVKZVLo&utm_campaign=sharing&utm_medium=link_btn&utm_source=htls" target="_blank" class="bg-white border border-stone-300 text-stone-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-stone-50 transition shadow-sm flex items-center"><i class="fa-solid fa-map-location-dot mr-1"></i> 지도</a>
                         <a href="https://www.klook.com/ko/hotels/detail/51487-hotel-elsereine-osaka/?spm=SearchResult.SearchResult_LIST&clickId=6463bcbe48&room_num=1&adult_num=3&child_num=0&age=&check_in=2026-03-29&check_out=2026-03-31&latlng=" target="_blank" class="bg-purple-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-purple-600 transition shadow-sm flex items-center"><i class="fa-solid fa-check-to-slot mr-1"></i> 예약</a>
                     </div>
                 </div>
             </div>
 
-            <!-- 1. 필터 버튼 -->
-            <div class="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide sticky top-[60px] z-40 bg-stone-100 py-2">
-                <button onclick="filterData('all')" class="filter-btn active bg-stone-800 text-white px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition shadow-sm">전체</button>
-                <button onclick="filterData('식당')" class="filter-btn bg-white border border-stone-300 text-stone-600 px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition shadow-sm">🍱 식당</button>
-                <button onclick="filterData('관광')" class="filter-btn bg-white border border-stone-300 text-stone-600 px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition shadow-sm">📷 관광</button>
-                <button onclick="filterData('쇼핑')" class="filter-btn bg-white border border-stone-300 text-stone-600 px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition shadow-sm">🛍️ 쇼핑</button>
-                <button onclick="filterData('교통')" class="filter-btn bg-white border border-stone-300 text-stone-600 px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition shadow-sm">🚌 교통</button>
+            <!-- 3. 필터 (카테고리 + 지역 자동생성) -->
+            <div class="sticky top-[60px] z-30 bg-stone-100 pb-2">
+                <!-- 카테고리 -->
+                <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                    <button onclick="filterCategory('all')" class="cat-btn active bg-stone-800 text-white px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm">전체</button>
+                    <button onclick="filterCategory('식당')" class="cat-btn bg-white border border-stone-300 text-stone-600 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm">🍱 식당</button>
+                    <button onclick="filterCategory('관광')" class="cat-btn bg-white border border-stone-300 text-stone-600 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm">📷 관광</button>
+                    <button onclick="filterCategory('쇼핑')" class="cat-btn bg-white border border-stone-300 text-stone-600 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm">🛍️ 쇼핑</button>
+                    <button onclick="filterCategory('교통')" class="cat-btn bg-white border border-stone-300 text-stone-600 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm">🚌 교통</button>
+                </div>
+                <!-- 지역 (자동 생성) -->
+                <div id="region-filters" class="flex gap-2 overflow-x-auto pt-1 pb-1 scrollbar-hide min-h-[30px]">
+                    <!-- JS로 채워짐 -->
+                </div>
             </div>
 
-            <!-- 2. 데이터 없을 때 -->
+            <!-- 4. Empty State -->
             <div id="empty-state" class="hidden flex-col items-center justify-center py-12 text-center">
                 <div class="w-16 h-16 bg-stone-200 rounded-full flex items-center justify-center text-3xl mb-4 text-stone-400">📝</div>
                 <h3 class="text-lg font-bold text-stone-600">일정을 채워주세요</h3>
-                <p class="text-sm text-stone-400 mt-2">상단 '등록' 버튼을 눌러<br>나만의 여행 지도를 완성하세요.</p>
             </div>
 
-            <!-- 3. 카드 리스트 -->
-            <div id="card-container" class="space-y-6"></div>
+            <!-- 5. 카드 리스트 (2열 그리드) -->
+            <div id="card-container" class="grid grid-cols-2 gap-3 pb-10">
+                <!-- JS Generated -->
+            </div>
 
-            <!-- 4. 초기화 -->
-            <div id="reset-btn-container" class="mt-12 text-center pb-10">
+            <!-- 6. 초기화 -->
+            <div class="text-center pb-10">
                 <button onclick="clearAllData()" class="text-xs text-stone-400 underline hover:text-red-500">데이터 전체 삭제</button>
             </div>
         </div>
@@ -187,221 +160,346 @@
             <div class="bg-white rounded-2xl shadow-lg border border-stone-100 p-6">
                 <h2 class="text-xl font-bold mb-6 text-stone-800 flex items-center gap-2">
                     <span class="w-1 h-6 bg-rose-500 rounded-full block"></span>
-                    정보 입력
+                    <span id="form-title">정보 입력</span>
                 </h2>
                 
-                <form id="trip-form" onsubmit="saveItem(event)" class="space-y-6">
+                <form id="trip-form" onsubmit="saveItem(event)" class="space-y-5">
+                    <input type="hidden" name="id" id="edit-id"> <!-- 수정용 ID -->
+
                     <!-- 카테고리 -->
-                    <div>
-                        <label class="block text-xs font-bold text-stone-500 mb-2">카테고리</label>
-                        <div class="grid grid-cols-4 gap-2">
-                            <label class="cursor-pointer">
-                                <input type="radio" name="category" value="식당" class="peer sr-only" checked onchange="toggleFields()">
-                                <div class="text-center py-3 bg-stone-50 rounded-xl border-2 border-stone-100 peer-checked:bg-rose-50 peer-checked:text-rose-600 peer-checked:border-rose-500 text-xs font-bold transition"><div class="text-lg mb-1">🍱</div>식당</div>
-                            </label>
-                            <label class="cursor-pointer">
-                                <input type="radio" name="category" value="관광" class="peer sr-only" onchange="toggleFields()">
-                                <div class="text-center py-3 bg-stone-50 rounded-xl border-2 border-stone-100 peer-checked:bg-blue-50 peer-checked:text-blue-600 peer-checked:border-blue-500 text-xs font-bold transition"><div class="text-lg mb-1">📷</div>관광</div>
-                            </label>
-                            <label class="cursor-pointer">
-                                <input type="radio" name="category" value="쇼핑" class="peer sr-only" onchange="toggleFields()">
-                                <div class="text-center py-3 bg-stone-50 rounded-xl border-2 border-stone-100 peer-checked:bg-yellow-50 peer-checked:text-yellow-600 peer-checked:border-yellow-500 text-xs font-bold transition"><div class="text-lg mb-1">🛍️</div>쇼핑</div>
-                            </label>
-                            <label class="cursor-pointer">
-                                <input type="radio" name="category" value="교통" class="peer sr-only" onchange="toggleFields()">
-                                <div class="text-center py-3 bg-stone-50 rounded-xl border-2 border-stone-100 peer-checked:bg-green-50 peer-checked:text-green-600 peer-checked:border-green-500 text-xs font-bold transition"><div class="text-lg mb-1">🚌</div>교통</div>
-                            </label>
-                        </div>
+                    <div class="grid grid-cols-4 gap-2">
+                        <label class="cursor-pointer"><input type="radio" name="category" value="식당" class="peer sr-only" checked onchange="toggleFields()"><div class="text-center py-2 bg-stone-50 rounded-lg border-2 border-stone-100 peer-checked:bg-rose-50 peer-checked:text-rose-600 peer-checked:border-rose-500 text-xs font-bold transition">🍱 식당</div></label>
+                        <label class="cursor-pointer"><input type="radio" name="category" value="관광" class="peer sr-only" onchange="toggleFields()"><div class="text-center py-2 bg-stone-50 rounded-lg border-2 border-stone-100 peer-checked:bg-blue-50 peer-checked:text-blue-600 peer-checked:border-blue-500 text-xs font-bold transition">📷 관광</div></label>
+                        <label class="cursor-pointer"><input type="radio" name="category" value="쇼핑" class="peer sr-only" onchange="toggleFields()"><div class="text-center py-2 bg-stone-50 rounded-lg border-2 border-stone-100 peer-checked:bg-yellow-50 peer-checked:text-yellow-600 peer-checked:border-yellow-500 text-xs font-bold transition">🛍️ 쇼핑</div></label>
+                        <label class="cursor-pointer"><input type="radio" name="category" value="교통" class="peer sr-only" onchange="toggleFields()"><div class="text-center py-2 bg-stone-50 rounded-lg border-2 border-stone-100 peer-checked:bg-green-50 peer-checked:text-green-600 peer-checked:border-green-500 text-xs font-bold transition">🚌 교통</div></label>
                     </div>
 
-                    <!-- 입력 그룹들 -->
+                    <!-- 표준 입력 -->
                     <div id="group-standard">
-                        <div class="grid grid-cols-3 gap-3">
+                        <div class="space-y-3">
                             <div>
-                                <label class="block text-xs font-bold text-stone-500 mb-1">지역 (자동완성)</label>
-                                <input type="text" list="location-list" name="region" placeholder="지역 입력" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                                <label class="block text-xs font-bold text-stone-500 mb-1">지역</label>
+                                <input type="text" list="location-list" name="region" id="input-region" placeholder="지역 선택/입력" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
                             </div>
-                            <div class="col-span-2">
-                                <label class="block text-xs font-bold text-stone-500 mb-1">장소/가게 이름</label>
-                                <input type="text" name="placeName" placeholder="이름 입력" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 font-bold">
+                            <div>
+                                <label class="block text-xs font-bold text-stone-500 mb-1">장소명</label>
+                                <input type="text" name="placeName" id="input-name" placeholder="이름 입력" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 font-bold">
                             </div>
                         </div>
                     </div>
 
+                    <!-- 교통 전용 -->
                     <div id="group-transport" class="hidden p-4 bg-green-50 rounded-xl border border-green-100">
-                        <div class="flex items-center gap-2 mb-3">
+                        <div class="flex items-center gap-2">
                             <div class="flex-1">
-                                <label class="block text-xs font-bold text-green-700 mb-1">출발지</label>
-                                <input type="text" list="location-list" name="origin" placeholder="어디서" class="w-full bg-white border border-green-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                                <label class="block text-xs font-bold text-green-700 mb-1">출발</label>
+                                <input type="text" list="location-list" name="origin" id="input-origin" class="w-full bg-white border border-green-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
                             </div>
                             <div class="pt-5 text-green-400"><i class="fa-solid fa-arrow-right"></i></div>
                             <div class="flex-1">
-                                <label class="block text-xs font-bold text-green-700 mb-1">도착지</label>
-                                <input type="text" list="location-list" name="destination" placeholder="어디로" class="w-full bg-white border border-green-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                                <label class="block text-xs font-bold text-green-700 mb-1">도착</label>
+                                <input type="text" list="location-list" name="destination" id="input-dest" class="w-full bg-white border border-green-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
                             </div>
                         </div>
                     </div>
 
+                    <!-- 설명 -->
                     <div>
-                        <label class="block text-xs font-bold text-stone-500 mb-1">설명 / 메모</label>
-                        <textarea name="desc" rows="3" placeholder="영업시간, 팁, 구매리스트 등" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"></textarea>
+                        <label class="block text-xs font-bold text-stone-500 mb-1">설명</label>
+                        <textarea name="desc" id="input-desc" rows="3" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"></textarea>
                     </div>
 
+                    <!-- 식당 전용 -->
                     <div id="group-food" class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-bold text-stone-500 mb-1">대표 메뉴</label>
-                            <input type="text" name="menu" placeholder="예: 스시 오마카세" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                            <input type="text" name="menu" id="input-menu" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-stone-500 mb-1">가격대 (1인)</label>
-                            <input type="text" name="price" placeholder="예: 5000엔~" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                            <label class="block text-xs font-bold text-stone-500 mb-1">가격대</label>
+                            <input type="text" name="price" id="input-price" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
                         </div>
                     </div>
 
-                    <!-- 링크 (3개: 지도, 관련, 예약) -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div id="field-mapLink">
-                            <label class="block text-xs font-bold text-stone-500 mb-1">구글맵 링크</label>
-                            <div class="relative">
-                                <i class="fa-solid fa-map-location-dot absolute left-3 top-3.5 text-stone-400"></i>
-                                <input type="url" name="mapLink" placeholder="https://goo.gl/maps/..." class="w-full pl-9 bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-                            </div>
-                        </div>
-                        <div id="field-relatedLink">
-                            <label class="block text-xs font-bold text-stone-500 mb-1">관련 링크 (블로그/인스타)</label>
-                            <div class="relative">
-                                <i class="fa-solid fa-link absolute left-3 top-3.5 text-stone-400"></i>
-                                <input type="url" name="relatedLink" placeholder="URL 입력" class="w-full pl-9 bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-                            </div>
-                        </div>
-                        <div id="field-reserveLink" class="md:col-span-2">
-                            <label class="block text-xs font-bold text-stone-500 mb-1">예약/정보 링크</label>
-                            <div class="relative">
-                                <i class="fa-solid fa-calendar-check absolute left-3 top-3.5 text-stone-400"></i>
-                                <input type="url" name="reserveLink" placeholder="공홈, 타베로그 등" class="w-full pl-9 bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-                            </div>
-                        </div>
+                    <!-- 링크 -->
+                    <div class="space-y-3">
+                        <div id="field-mapLink"><input type="url" name="mapLink" id="input-map" placeholder="구글맵 링크" class="w-full pl-3 bg-stone-50 border border-stone-200 rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500"></div>
+                        <div id="field-relatedLink"><input type="url" name="relatedLink" id="input-related" placeholder="관련 링크 (블로그 등)" class="w-full pl-3 bg-stone-50 border border-stone-200 rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500"></div>
+                        <div id="field-reserveLink"><input type="url" name="reserveLink" id="input-reserve" placeholder="예약 링크" class="w-full pl-3 bg-stone-50 border border-stone-200 rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500"></div>
                     </div>
 
+                    <!-- 이미지 -->
                     <div class="border-t border-stone-100 pt-4">
-                        <label class="block text-xs font-bold text-stone-500 mb-2">대표 사진 (선택)</label>
+                        <label class="block text-xs font-bold text-stone-500 mb-2">사진 등록</label>
                         <div class="flex gap-2 mb-2">
-                            <button type="button" onclick="switchImgMode('url')" id="btn-img-url" class="text-[10px] px-3 py-1 bg-stone-800 text-white rounded-full">주소 입력</button>
-                            <button type="button" onclick="switchImgMode('file')" id="btn-img-file" class="text-[10px] px-3 py-1 bg-stone-200 text-stone-600 rounded-full">파일 업로드</button>
+                            <button type="button" onclick="switchImgMode('url')" id="btn-img-url" class="text-[10px] px-3 py-1 bg-stone-800 text-white rounded-full">주소</button>
+                            <button type="button" onclick="switchImgMode('file')" id="btn-img-file" class="text-[10px] px-3 py-1 bg-stone-200 text-stone-600 rounded-full">파일</button>
                         </div>
-                        <div id="img-url-input">
-                            <input type="url" id="imgUrlField" placeholder="이미지 주소 붙여넣기" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" onchange="previewImage(this.value)">
-                        </div>
-                        <div id="img-file-input" class="hidden">
-                            <input type="file" id="imgFileField" accept="image/*" class="w-full text-sm text-stone-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-rose-50 file:text-rose-700 hover:file:bg-rose-100" onchange="handleFileSelect(event)">
-                        </div>
+                        <input type="url" id="imgUrlField" placeholder="이미지 주소" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" onchange="previewImage(this.value)">
+                        <input type="file" id="imgFileField" accept="image/*" class="hidden w-full text-xs" onchange="handleFileSelect(event)">
+                        
                         <div class="mt-3 h-32 rounded-lg flex items-center justify-center border border-dashed border-stone-300 overflow-hidden relative bg-stone-50">
                             <img id="preview-img" class="absolute inset-0 w-full h-full object-cover hidden">
                             <span class="text-xs text-stone-400">미리보기</span>
                         </div>
                         <input type="hidden" name="finalImgData" id="final-img-data">
+                        <input type="hidden" id="existing-img-data"> <!-- 수정 시 기존 이미지 유지용 -->
                     </div>
 
-                    <button type="submit" class="w-full bg-stone-800 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-stone-900 transition flex justify-center items-center gap-2 mt-4">
-                        <i class="fa-solid fa-floppy-disk"></i> 저장하기
+                    <button type="submit" id="save-btn" class="w-full bg-stone-800 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-stone-900 transition flex justify-center items-center gap-2 mt-4">
+                        <i class="fa-solid fa-check"></i> 완료
                     </button>
                 </form>
             </div>
         </div>
 
+        <!-- 이미지 라이트박스 -->
+        <div id="lightbox" class="fixed inset-0 bg-black/90 z-[100] hidden items-center justify-center p-4 cursor-pointer" onclick="closeLightbox()">
+            <img id="lightbox-img" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl transform scale-100 transition-transform duration-300" src="">
+            <button class="absolute top-4 right-4 text-white/70 hover:text-white text-3xl"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
     </main>
 
     <script>
-        const STORAGE_KEY = 'osaka_planner_final_v13';
+        const STORAGE_KEY = 'osaka_planner_final_v14';
         let tripData = [];
+        let currentFilter = 'all';
+        let currentRegion = 'all';
 
         document.addEventListener('DOMContentLoaded', () => {
             loadData();
-            renderCards('all');
-            toggleFields(); 
+            renderCards();
+            toggleFields();
         });
 
-        // --- Home Reset Function ---
-        function goHome() {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.getElementById('view-mode').classList.add('active');
-            
-            const viewBtn = document.getElementById('btn-view');
-            const uploadBtn = document.getElementById('btn-upload');
-            viewBtn.className = "text-xs bg-rose-600 text-white px-4 py-2 rounded-lg font-bold shadow transition";
-            uploadBtn.className = "text-xs bg-white text-stone-600 border border-stone-300 px-4 py-2 rounded-lg font-bold shadow-sm transition hover:bg-stone-50";
-
-            filterData('all');
-            window.scrollTo(0,0);
-        }
-
-        // --- Data Handling ---
+        // --- Core Functions ---
         function loadData() {
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) tripData = JSON.parse(saved);
         }
 
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(tripData));
+            renderCards();
+        }
+
+        function goHome() {
+            switchMode('view');
+            filterCategory('all');
+            window.scrollTo(0,0);
+        }
+
+        // --- Upload / Edit Logic ---
+        function initUploadMode() {
+            resetForm();
+            switchMode('upload');
+        }
+
+        function resetForm() {
+            document.getElementById('trip-form').reset();
+            document.getElementById('edit-id').value = '';
+            document.getElementById('form-title').innerText = "정보 입력";
+            document.getElementById('save-btn').innerHTML = '<i class="fa-solid fa-check"></i> 완료';
+            document.getElementById('preview-img').classList.add('hidden');
+            document.getElementById('final-img-data').value = '';
+            document.getElementById('existing-img-data').value = '';
+            
+            // 카테고리 기본값(식당)으로 리셋 및 필드 토글
+            document.querySelector('input[name="category"][value="식당"]').checked = true;
+            toggleFields();
+        }
+
+        function editItem(id) {
+            const item = tripData.find(i => i.id === id);
+            if (!item) return;
+
+            // 1. 폼 채우기
+            document.getElementById('edit-id').value = item.id;
+            document.querySelector(`input[name="category"][value="${item.category}"]`).checked = true;
+            toggleFields();
+
+            document.getElementById('input-region').value = item.region || '';
+            document.getElementById('input-name').value = item.name || '';
+            document.getElementById('input-origin').value = item.origin || '';
+            document.getElementById('input-dest').value = item.destination || '';
+            document.getElementById('input-desc').value = item.desc || '';
+            document.getElementById('input-menu').value = item.menu || '';
+            document.getElementById('input-price').value = item.price || '';
+            document.getElementById('input-map').value = item.mapLink || '';
+            document.getElementById('input-related').value = item.relatedLink || '';
+            document.getElementById('input-reserve').value = item.reserveLink || '';
+
+            // 이미지 처리
+            if (item.imgData) {
+                document.getElementById('preview-img').src = item.imgData;
+                document.getElementById('preview-img').classList.remove('hidden');
+                document.getElementById('existing-img-data').value = item.imgData; // 기존 이미지 보존
+            } else {
+                document.getElementById('preview-img').classList.add('hidden');
+            }
+
+            // 2. UI 변경
+            document.getElementById('form-title').innerText = "내용 수정";
+            document.getElementById('save-btn').innerHTML = '<i class="fa-solid fa-rotate"></i> 수정 완료';
+            switchMode('upload');
+        }
+
         function saveItem(e) {
             e.preventDefault();
             const formData = new FormData(e.target);
+            const editId = formData.get('id'); // 수정 모드일 때 ID
+            
+            // 이미지: 새로 올린 것 > URL 입력 > 기존 이미지 > 없음
+            let finalImg = document.getElementById('final-img-data').value;
+            if(!finalImg) finalImg = document.getElementById('imgUrlField').value;
+            if(!finalImg) finalImg = document.getElementById('existing-img-data').value;
+
             const category = formData.get('category');
             
-            let finalImg = document.getElementById('final-img-data').value || document.getElementById('imgUrlField').value;
-
-            const newItem = {
-                id: Date.now(),
+            const itemData = {
+                id: editId ? parseInt(editId) : Date.now(),
                 category: category,
                 desc: formData.get('desc'),
                 reserveLink: formData.get('reserveLink'),
-                relatedLink: formData.get('relatedLink'), // New
+                relatedLink: formData.get('relatedLink'),
+                mapLink: category !== '교통' ? formData.get('mapLink') : null,
                 imgData: finalImg,
                 region: category !== '교통' ? formData.get('region') : null,
                 name: category !== '교통' ? formData.get('placeName') : null,
+                origin: category === '교통' ? formData.get('origin') : null,
+                destination: category === '교통' ? formData.get('destination') : null,
                 menu: category === '식당' ? formData.get('menu') : null,
                 price: category === '식당' ? formData.get('price') : null,
-                mapLink: category !== '교통' ? formData.get('mapLink') : null,
-                origin: category === '교통' ? formData.get('origin') : null,
-                destination: category === '교통' ? formData.get('destination') : null
             };
 
-            tripData.push(newItem);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(tripData));
-            alert('✅ 저장되었습니다!');
-            e.target.reset();
-            resetImagePreview();
+            if (editId) {
+                // 수정: 기존 데이터에서 인덱스 찾아 교체
+                const index = tripData.findIndex(i => i.id === parseInt(editId));
+                if (index !== -1) tripData[index] = itemData;
+                alert("수정되었습니다.");
+            } else {
+                // 신규 저장
+                tripData.push(itemData);
+                alert("저장되었습니다.");
+            }
+
+            saveData();
             switchMode('view');
         }
 
         function deleteItem(id) {
             if(confirm("삭제하시겠습니까?")) {
-                tripData = tripData.filter(item => item.id !== id);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(tripData));
-                const activeBtn = document.querySelector('.filter-btn.active');
-                const filter = activeBtn ? activeBtn.innerText.replace(/[^가-힣]/g, '') : 'all';
-                renderCards(activeBtn.innerText.includes('전체') ? 'all' : filter);
+                tripData = tripData.filter(i => i.id !== id);
+                saveData();
             }
         }
 
         function clearAllData() {
-            if(confirm("모든 데이터를 삭제합니다.")) {
+            if(confirm("정말 모든 데이터를 삭제하시겠습니까? 복구할 수 없습니다.")) {
                 localStorage.removeItem(STORAGE_KEY);
                 tripData = [];
-                renderCards('all');
+                renderCards();
             }
         }
 
-        // --- UI Rendering ---
-        function renderCards(filterCategory) {
+        // --- UI Logic ---
+        function switchMode(mode) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(mode + '-mode').classList.add('active');
+            
+            const viewBtn = document.getElementById('btn-view');
+            const uploadBtn = document.getElementById('btn-upload');
+
+            if(mode === 'view') {
+                viewBtn.className = "text-xs bg-rose-600 text-white px-3 py-2 rounded-lg font-bold shadow transition";
+                uploadBtn.className = "text-xs bg-white text-stone-600 border border-stone-300 px-3 py-2 rounded-lg font-bold shadow-sm transition hover:bg-stone-50";
+                renderCards(); // 뷰 모드 진입 시 리렌더링
+            } else {
+                uploadBtn.className = "text-xs bg-rose-600 text-white px-3 py-2 rounded-lg font-bold shadow transition";
+                viewBtn.className = "text-xs bg-white text-stone-600 border border-stone-300 px-3 py-2 rounded-lg font-bold shadow-sm transition hover:bg-stone-50";
+            }
+        }
+
+        function filterCategory(cat) {
+            currentFilter = cat;
+            currentRegion = 'all'; // 카테고리 바꾸면 지역 필터 초기화
+            updateFilterButtons();
+            renderCards();
+        }
+
+        function filterRegion(reg) {
+            currentRegion = reg;
+            renderCards();
+            updateRegionButtons();
+        }
+
+        function updateFilterButtons() {
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                if (btn.innerText.includes(currentFilter.replace('all','전체'))) {
+                    btn.className = "cat-btn active bg-stone-800 text-white px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm";
+                } else {
+                    btn.className = "cat-btn bg-white border border-stone-300 text-stone-600 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm";
+                }
+            });
+        }
+
+        function updateRegionButtons() {
+            // 현재 지역 필터 버튼 스타일 업데이트
+            document.querySelectorAll('.reg-btn').forEach(btn => {
+                if (btn.innerText === currentRegion || (currentRegion === 'all' && btn.innerText === '전체')) {
+                    btn.className = "reg-btn bg-stone-600 text-white px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap shadow-sm";
+                } else {
+                    btn.className = "reg-btn bg-stone-200 text-stone-600 px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap shadow-sm";
+                }
+            });
+        }
+
+        function renderCards() {
             const container = document.getElementById('card-container');
             const emptyState = document.getElementById('empty-state');
+            const flightInfo = document.getElementById('flight-info');
+            const hotelInfo = document.getElementById('hotel-info');
+            const regionFilterContainer = document.getElementById('region-filters');
+
             container.innerHTML = '';
 
+            // 1. 기본 필터링 (카테고리)
             let filtered = tripData;
-            if (filterCategory !== 'all') {
-                filtered = tripData.filter(item => item.category === filterCategory);
+            if (currentFilter !== 'all') {
+                filtered = tripData.filter(i => i.category === currentFilter);
             }
 
+            // 2. 지역 필터 생성 (현재 필터된 데이터 기준 지역 목록 추출)
+            const regions = [...new Set(filtered.map(i => i.region || i.origin).filter(Boolean))]; // 교통은 출발지를 지역으로 간주
+            
+            if (regions.length > 0) {
+                let regionHtml = `<button onclick="filterRegion('all')" class="reg-btn ${currentRegion === 'all' ? 'bg-stone-600 text-white' : 'bg-stone-200 text-stone-600'} px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap shadow-sm">전체</button>`;
+                regions.forEach(r => {
+                    regionHtml += `<button onclick="filterRegion('${r}')" class="reg-btn ${currentRegion === r ? 'bg-stone-600 text-white' : 'bg-stone-200 text-stone-600'} px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap shadow-sm">${r}</button>`;
+                });
+                regionFilterContainer.innerHTML = regionHtml;
+                regionFilterContainer.classList.remove('hidden');
+            } else {
+                regionFilterContainer.innerHTML = '';
+            }
+
+            // 3. 2차 필터링 (지역)
+            if (currentRegion !== 'all') {
+                filtered = filtered.filter(i => (i.region === currentRegion || i.origin === currentRegion));
+            }
+
+            // 정렬
             filtered.sort((a, b) => b.id - a.id);
+
+            // 4. UI 표시 제어 (전체보기 일때만 항공/숙소 보이기)
+            if (currentFilter === 'all' && currentRegion === 'all') {
+                flightInfo.classList.remove('hidden');
+                hotelInfo.classList.remove('hidden');
+            } else {
+                flightInfo.classList.add('hidden');
+                hotelInfo.classList.add('hidden');
+            }
 
             if (filtered.length === 0) {
                 emptyState.classList.remove('hidden');
@@ -411,6 +509,7 @@
                 emptyState.classList.remove('flex');
             }
 
+            // 5. 카드 렌더링
             filtered.forEach(item => {
                 let badgeClass = 'bg-stone-100 text-stone-600';
                 if(item.category === '식당') badgeClass = 'bg-rose-100 text-rose-600';
@@ -418,99 +517,81 @@
                 else if(item.category === '쇼핑') badgeClass = 'bg-yellow-100 text-yellow-600';
                 else if(item.category === '교통') badgeClass = 'bg-green-100 text-green-600';
 
+                // 이미지 (3:4 비율)
                 let imgHtml = item.imgData ? 
-                    `<div class="h-40 w-full bg-stone-200 overflow-hidden relative"><img src="${item.imgData}" class="w-full h-full object-cover">${item.region ? `<div class="absolute top-2 left-2 px-2 py-1 rounded bg-black/60 text-white text-[10px] font-bold backdrop-blur-sm">${item.region}</div>` : ''}</div>` : 
-                    `<div class="h-20 bg-stone-50 flex items-center justify-center text-stone-300 text-xs">NO IMAGE</div>`;
+                    `<div class="aspect-[3/4] w-full bg-stone-200 overflow-hidden relative cursor-pointer" onclick="openLightbox('${item.imgData}')">
+                        <img src="${item.imgData}" class="w-full h-full object-cover transition hover:scale-105 duration-500">
+                    </div>` : 
+                    `<div class="aspect-[3/4] w-full bg-stone-100 flex items-center justify-center text-stone-300 text-xs">NO IMAGE</div>`;
 
-                let titleHtml = '';
+                // 내용
+                let contentHtml = '';
                 if(item.category === '교통') {
-                    titleHtml = `
-                    <div class="flex items-center gap-2 mb-2 bg-green-50 p-3 rounded-lg border border-green-100">
-                        <span class="font-bold text-green-700">${item.origin || '?'}</span>
-                        <i class="fa-solid fa-arrow-right text-green-400 text-xs"></i>
-                        <span class="font-bold text-green-700">${item.destination || '?'}</span>
-                    </div>`;
+                    contentHtml = `<div class="bg-green-50 p-2 rounded border border-green-100 mb-2"><div class="font-bold text-green-700 text-sm truncate">${item.origin}</div><div class="text-center text-green-400 text-xs py-1"><i class="fa-solid fa-arrow-down"></i></div><div class="font-bold text-green-700 text-sm truncate">${item.destination}</div></div>`;
                 } else {
-                    titleHtml = `<h3 class="text-xl font-bold text-stone-800 leading-tight mb-1">📍 ${item.name}</h3>`;
-                }
-
-                let menuHtml = '';
-                if(item.category === '식당' && (item.menu || item.price)) {
-                    menuHtml = `
-                    <div class="mt-3 bg-stone-50 p-2.5 rounded-lg border border-stone-100 text-xs flex flex-col gap-1">
-                        ${item.menu ? `<div class="flex justify-between"><span class="text-stone-400 font-bold">Menu</span> <span class="text-stone-700 font-bold">${item.menu}</span></div>` : ''}
-                        ${item.price ? `<div class="flex justify-between"><span class="text-stone-400 font-bold">Price</span> <span class="text-stone-700 font-bold">${item.price}</span></div>` : ''}
-                    </div>`;
-                }
-
-                // Buttons
-                let mapBtn = '';
-                if(item.category !== '교통') {
-                    if(item.mapLink) {
-                        mapBtn = `<a href="${item.mapLink}" target="_blank" class="flex-1 bg-white border border-stone-200 text-stone-600 py-2.5 rounded-lg text-center text-xs font-bold hover:bg-stone-50 transition">지도</a>`;
-                    } else {
-                        mapBtn = `<button disabled class="flex-1 bg-stone-50 text-stone-300 border border-stone-100 py-2.5 rounded-lg text-center text-xs font-bold cursor-not-allowed">지도X</button>`;
-                    }
-                }
-
-                let relatedBtn = '';
-                if(item.relatedLink) {
-                    relatedBtn = `<a href="${item.relatedLink}" target="_blank" class="flex-1 bg-blue-50 border border-blue-100 text-blue-600 py-2.5 rounded-lg text-center text-xs font-bold hover:bg-blue-100 transition">소개</a>`;
-                } else {
-                    relatedBtn = `<button disabled class="flex-1 bg-stone-50 text-stone-300 border border-stone-100 py-2.5 rounded-lg text-center text-xs font-bold cursor-not-allowed">소개X</button>`;
-                }
-
-                let reserveBtn = '';
-                if(item.category !== '쇼핑') {
-                    if(item.reserveLink) {
-                        reserveBtn = `<a href="${item.reserveLink}" target="_blank" class="flex-1 bg-rose-500 text-white py-2.5 rounded-lg text-center text-xs font-bold hover:bg-rose-600 transition shadow-sm">예약</a>`;
-                    } else {
-                        reserveBtn = `<button disabled class="flex-1 bg-stone-50 text-stone-300 border border-stone-100 py-2.5 rounded-lg text-center text-xs font-bold cursor-not-allowed">예약X</button>`;
-                    }
-                }
-
-                const cardHtml = `
-                <div class="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden group hover:shadow-md transition">
-                    <div class="relative">
-                        ${imgHtml}
-                        <button onclick="deleteItem(${item.id})" class="absolute top-2 right-2 w-8 h-8 bg-black/50 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200 z-10">
-                            <i class="fa-solid fa-trash-can text-xs"></i>
-                        </button>
+                    // 지역 + 메뉴 뱃지
+                    contentHtml = `
+                    <div class="flex flex-wrap gap-1 mb-2">
+                        ${item.region ? `<span class="bg-stone-100 text-stone-500 text-[10px] px-1.5 py-0.5 rounded font-bold truncate max-w-full">${item.region}</span>` : ''}
+                        ${item.menu ? `<span class="bg-orange-50 text-orange-600 text-[10px] px-1.5 py-0.5 rounded font-bold truncate max-w-full">${item.menu}</span>` : ''}
                     </div>
-                    
-                    <div class="p-5">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="px-2 py-1 rounded text-[10px] font-bold ${badgeClass}">${item.category}</span>
-                        </div>
-                        
-                        ${titleHtml}
-                        <p class="text-sm text-stone-500 whitespace-pre-wrap leading-relaxed">${item.desc}</p>
-                        
-                        ${menuHtml}
+                    <h3 class="text-base font-bold text-stone-800 leading-tight mb-1 truncate">${item.name}</h3>`;
+                }
 
-                        <div class="flex gap-2 mt-4 pt-4 border-t border-stone-100">
-                            ${mapBtn}
-                            ${relatedBtn}
-                            ${reserveBtn}
+                // 버튼
+                let mapBtn = (item.category !== '교통' && item.mapLink) ? `<a href="${item.mapLink}" target="_blank" class="flex-1 bg-white border border-stone-200 text-stone-500 py-2 rounded text-[10px] font-bold hover:bg-stone-50 text-center">지도</a>` : '';
+                let relatedBtn = item.relatedLink ? `<a href="${item.relatedLink}" target="_blank" class="flex-1 bg-blue-50 border border-blue-100 text-blue-500 py-2 rounded text-[10px] font-bold hover:bg-blue-100 text-center">소개</a>` : '';
+                let reserveBtn = (item.category !== '쇼핑' && item.reserveLink) ? `<a href="${item.reserveLink}" target="_blank" class="flex-1 bg-rose-50 border border-rose-100 text-rose-500 py-2 rounded text-[10px] font-bold hover:bg-rose-100 text-center">예약</a>` : '';
+
+                // 버튼 그룹 (비어있으면 숨김)
+                let btnsHtml = '';
+                if(mapBtn || relatedBtn || reserveBtn) {
+                    btnsHtml = `<div class="flex gap-1 mt-3 pt-3 border-t border-stone-100">${mapBtn}${relatedBtn}${reserveBtn}</div>`;
+                }
+
+                container.innerHTML += `
+                <div class="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden group relative flex flex-col">
+                    <div class="absolute top-2 right-2 flex gap-1 z-10 opacity-0 group-hover:opacity-100 transition duration-200">
+                        <button onclick="editItem(${item.id})" class="w-7 h-7 bg-white/90 hover:bg-blue-500 hover:text-white text-stone-500 rounded-full flex items-center justify-center shadow-sm text-xs"><i class="fa-solid fa-pencil"></i></button>
+                        <button onclick="deleteItem(${item.id})" class="w-7 h-7 bg-white/90 hover:bg-red-500 hover:text-white text-stone-500 rounded-full flex items-center justify-center shadow-sm text-xs"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                    ${imgHtml}
+                    <div class="p-3 flex-1 flex flex-col">
+                        <div class="mb-1"><span class="text-[10px] font-bold ${badgeClass} px-1.5 py-0.5 rounded">${item.category}</span></div>
+                        <div class="flex-1">
+                            ${contentHtml}
+                            <p class="text-xs text-stone-400 line-clamp-2 mt-1">${item.desc || ''}</p>
                         </div>
+                        ${btnsHtml}
                     </div>
                 </div>`;
-                
-                container.innerHTML += cardHtml;
             });
         }
 
-        // --- Form Interaction ---
+        // --- Lightbox ---
+        function openLightbox(src) {
+            const lightbox = document.getElementById('lightbox');
+            const img = document.getElementById('lightbox-img');
+            img.src = src;
+            lightbox.classList.remove('hidden');
+            lightbox.classList.add('flex');
+        }
+
+        function closeLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            lightbox.classList.add('hidden');
+            lightbox.classList.remove('flex');
+        }
+
+        // --- Form Interaction (Toggle Fields) ---
         function toggleFields() {
             const category = document.querySelector('input[name="category"]:checked').value;
-            
             const groupStandard = document.getElementById('group-standard'); 
             const groupTransport = document.getElementById('group-transport');
             const groupFood = document.getElementById('group-food');
             const fieldMap = document.getElementById('field-mapLink'); 
             const fieldReserve = document.getElementById('field-reserveLink');
 
-            // Reset visibility
             groupStandard.style.display = 'block';
             groupTransport.style.display = 'none';
             groupFood.style.display = 'none';
@@ -528,67 +609,29 @@
             }
         }
 
-        function switchMode(mode) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.getElementById(mode + '-mode').classList.add('active');
-            
-            const viewBtn = document.getElementById('btn-view');
-            const uploadBtn = document.getElementById('btn-upload');
-
-            if(mode === 'view') {
-                viewBtn.className = "text-xs bg-rose-600 text-white px-4 py-2 rounded-lg font-bold shadow transition";
-                uploadBtn.className = "text-xs bg-white text-stone-600 border border-stone-300 px-4 py-2 rounded-lg font-bold shadow-sm transition hover:bg-stone-50";
-                renderCards('all');
-            } else {
-                uploadBtn.className = "text-xs bg-rose-600 text-white px-4 py-2 rounded-lg font-bold shadow transition";
-                viewBtn.className = "text-xs bg-white text-stone-600 border border-stone-300 px-4 py-2 rounded-lg font-bold shadow-sm transition hover:bg-stone-50";
-            }
-        }
-
-        function filterData(category) {
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.className = "filter-btn bg-white border border-stone-300 text-stone-600 px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition shadow-sm";
-            });
-            event.target.className = "filter-btn active bg-stone-800 text-white px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition shadow-sm";
-            const cleanCat = category.replace(/[^가-힣\/]/g, '');
-            renderCards(category === 'all' ? 'all' : cleanCat);
-        }
-
+        // --- Image Helpers (Same as before) ---
         function switchImgMode(mode) {
             const urlInput = document.getElementById('img-url-input');
             const fileInput = document.getElementById('img-file-input');
             const btnUrl = document.getElementById('btn-img-url');
             const btnFile = document.getElementById('btn-img-file');
-
             if(mode === 'url') {
-                urlInput.classList.remove('hidden');
-                fileInput.classList.add('hidden');
-                btnUrl.className = "text-[10px] px-3 py-1 bg-stone-800 text-white rounded-full transition";
-                btnFile.className = "text-[10px] px-3 py-1 bg-stone-200 text-stone-600 rounded-full transition";
+                urlInput.classList.remove('hidden'); fileInput.classList.add('hidden');
+                btnUrl.className = "text-[10px] px-3 py-1 bg-stone-800 text-white rounded-full";
+                btnFile.className = "text-[10px] px-3 py-1 bg-stone-200 text-stone-600 rounded-full";
             } else {
-                urlInput.classList.add('hidden');
-                fileInput.classList.remove('hidden');
-                btnFile.className = "text-[10px] px-3 py-1 bg-stone-800 text-white rounded-full transition";
-                btnUrl.className = "text-[10px] px-3 py-1 bg-stone-200 text-stone-600 rounded-full transition";
+                urlInput.classList.add('hidden'); fileInput.classList.remove('hidden');
+                btnFile.className = "text-[10px] px-3 py-1 bg-stone-800 text-white rounded-full";
+                btnUrl.className = "text-[10px] px-3 py-1 bg-stone-200 text-stone-600 rounded-full";
             }
         }
-
         function previewImage(url) {
             const preview = document.getElementById('preview-img');
-            const span = preview.nextElementSibling;
-            if(url) {
-                preview.src = url;
-                preview.classList.remove('hidden');
-                span.classList.add('hidden');
-            } else {
-                resetImagePreview();
-            }
+            if(url) { preview.src = url; preview.classList.remove('hidden'); preview.nextElementSibling.classList.add('hidden'); }
         }
-
         function handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 const img = new Image();
@@ -596,38 +639,27 @@
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
                     const MAX_WIDTH = 800;
-                    let width = img.width;
-                    let height = img.height;
-
-                    if (width > MAX_WIDTH) {
-                        height *= MAX_WIDTH / width;
-                        width = MAX_WIDTH;
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
+                    let width = img.width; let height = img.height;
+                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                    canvas.width = width; canvas.height = height;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
-
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                    
                     const preview = document.getElementById('preview-img');
                     preview.src = dataUrl;
                     preview.classList.remove('hidden');
-                    document.getElementById('final-img-data').value = dataUrl;
                     preview.nextElementSibling.classList.add('hidden');
+                    document.getElementById('final-img-data').value = dataUrl;
                 }
             };
             reader.readAsDataURL(file);
         }
-
-        function resetImagePreview() {
-            const preview = document.getElementById('preview-img');
-            preview.classList.add('hidden');
-            preview.src = '';
-            preview.nextElementSibling.classList.remove('hidden');
-            document.getElementById('final-img-data').value = "";
-        }
     </script>
+
+    <!-- 라이트박스 컨테이너 -->
+    <div id="lightbox" class="fixed inset-0 bg-black/95 z-[100] hidden items-center justify-center p-4 cursor-pointer" onclick="closeLightbox()">
+        <img id="lightbox-img" class="max-w-full max-h-[90vh] object-contain rounded shadow-2xl" src="">
+    </div>
+
 </body>
 </html>
