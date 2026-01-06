@@ -14,7 +14,7 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase 설정 (환경 변수 사용)
+        // Firebase 설정
         const firebaseConfig = JSON.parse(__firebase_config);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
@@ -25,8 +25,9 @@
         let currentUser = null;
         let currentTripId = localStorage.getItem('last_trip_id') || null;
         let unsubscribe = null;
+        let isAuthReady = false;
 
-        // 전역 변수로 노출 (HTML에서 사용)
+        // 전역 변수로 노출
         window.db = db;
         window.auth = auth;
         window.appId = appId;
@@ -37,6 +38,7 @@
                 await signInAnonymously(auth);
             } catch (error) {
                 console.error("Auth Error:", error);
+                showToast("로그인 오류 발생");
             }
         }
 
@@ -44,22 +46,25 @@
             if (user) {
                 currentUser = user;
                 window.currentUser = user;
+                isAuthReady = true;
                 updateConnectionStatus(true);
                 
-                // 저장된 트립 ID가 있으면 바로 연결, 없으면 환영 모달 띄우기
+                // 저장된 트립 ID가 있으면 자동 연결
                 if (currentTripId) {
                     connectToTrip(currentTripId);
-                } else {
-                    openWelcomeModal();
                 }
             } else {
                 updateConnectionStatus(false);
+                isAuthReady = false;
             }
         });
 
         // 여행 연결 함수
         window.connectToTrip = function(tripId) {
-            if (!currentUser) return;
+            if (!isAuthReady) {
+                showToast("서버 연결 중입니다. 잠시만 기다려주세요.");
+                return;
+            }
             if (!tripId) {
                 showToast("여행 코드를 입력해주세요.");
                 return;
@@ -76,8 +81,6 @@
             closeWelcomeModal();
             showToast(`'${tripId}' 여행에 접속했습니다.`);
 
-            // 실시간 리스너 연결 (Strict Path 규칙 준수)
-            // Public Data Path: artifacts/{appId}/public/data/{collectionName}
             const tripRef = doc(db, 'artifacts', appId, 'public', 'data', 'osaka_trips', tripId);
 
             unsubscribe = onSnapshot(tripRef, (docSnap) => {
@@ -88,24 +91,31 @@
                         window.renderCards();
                     }
                 } else {
-                    // 데이터가 없으면 (새로운 여행 코드)
-                    // 로컬에 기존 데이터가 있다면 업로드할지 물어볼 수도 있지만,
-                    // 여기서는 심플하게 빈 상태로 시작하거나 현재 로컬 데이터를 업로드함
-                    if (window.tripData.length > 0) {
-                        saveDataToCloud(); // 현재 로컬 데이터를 클라우드에 초기화
+                    // 클라우드에 데이터가 없음 (새로운 여행 코드)
+                    // 만약 로컬에 기존 데이터(legacy)가 있다면, 이를 클라우드로 업로드하여 마이그레이션
+                    if (window.tripData && window.tripData.length > 0) {
+                        showToast("기존 데이터를 클라우드에 업로드합니다.");
+                        saveDataToCloud(); 
                     } else {
-                        window.renderCards(); // 빈 화면 렌더링
+                        // 데이터가 없으면 빈 상태
+                        window.tripData = [];
+                        window.renderCards();
                     }
                 }
             }, (error) => {
                 console.error("Sync Error:", error);
-                showToast("데이터 동기화 중 오류가 발생했습니다.");
+                showToast("데이터 동기화 실패. 인터넷을 확인하세요.");
             });
         };
 
-        // 데이터 저장 함수 (Firestore)
+        // 데이터 저장 함수
         window.saveDataToCloud = async function() {
-            if (!currentUser || !currentTripId) return;
+            if (!currentUser || !currentTripId) {
+                // 아직 클라우드 모드가 아니면 로컬에는 저장이 안되므로(기존 키 사용X), 
+                // 여기서는 아무것도 안하거나 경고를 줄 수 있음. 
+                // 하지만 사용성을 위해 '여행 시작하기'를 유도하는 로직이 있으면 좋음.
+                return;
+            }
 
             const tripRef = doc(db, 'artifacts', appId, 'public', 'data', 'osaka_trips', currentTripId);
             try {
@@ -114,9 +124,10 @@
                     lastUpdated: new Date().toISOString(),
                     updatedBy: currentUser.uid
                 }, { merge: true });
+                console.log("Saved successfully");
             } catch (error) {
                 console.error("Save Error:", error);
-                showToast("저장 실패!");
+                showToast("저장 실패! 다시 시도해주세요.");
             }
         };
 
@@ -496,11 +507,24 @@
             }, 2000);
         }
 
+        // Legacy Data Loading
+        function loadLegacyData() {
+            const legacyKeys = ['osaka_trip_master_db_v2', 'osaka_trip_master_db', 'osaka_planner_final_v14'];
+            for (let key of legacyKeys) {
+                const saved = localStorage.getItem(key);
+                if (saved) {
+                    try {
+                        window.tripData = JSON.parse(saved);
+                        console.log("Legacy data loaded:", key);
+                        window.renderCards();
+                        return;
+                    } catch(e) { console.error(e); }
+                }
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
-            // Local Storage fallback or migration logic could go here
-            // But we rely on Firebase primarily now.
-            // renderCards() is called by Firestore listener
-            
+            loadLegacyData();
             toggleFields();
             
             document.addEventListener('paste', function(e) {
