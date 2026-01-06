@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2026 오사카/교토 클라우드 플래너</title>
+    <title>2026 오사카/교토 플래너</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -12,30 +12,53 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase 설정
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        // *** 중요: 모든 접속자가 공유할 고정 ID ***
-        const FIXED_TRIP_ID = "osaka_public_shared_plan_v1";
-
+        // 전역 상태 변수
+        let isCloudMode = false;
         let currentUser = null;
         let unsubscribe = null;
-        let isAuthReady = false;
-
-        // 전역 변수로 노출
-        window.db = db;
-        window.auth = auth;
-        window.appId = appId;
+        const FIXED_TRIP_ID = "osaka_public_shared_plan_v1";
         
-        // 인증 및 초기화 (수정됨: Custom Token 우선 사용)
-        async function initAuth() {
+        // 로컬 스토리지 키
+        const LOCAL_STORAGE_KEY = 'osaka_trip_local_data';
+
+        async function initApp() {
+            // 1. 환경 감지: Firebase 설정이 있는지 확인
+            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                try {
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                    
+                    const app = initializeApp(firebaseConfig);
+                    const auth = getAuth(app);
+                    const db = getFirestore(app);
+                    
+                    // 전역 노출
+                    window.db = db;
+                    window.auth = auth;
+                    window.appId = appId;
+                    isCloudMode = true;
+
+                    // 인증 시작
+                    setupAuth(auth);
+                } catch (e) {
+                    console.warn("Cloud init failed, switching to local mode:", e);
+                    activateLocalMode();
+                }
+            } else {
+                console.log("No cloud config detected. Using local mode.");
+                activateLocalMode();
+            }
+        }
+
+        function activateLocalMode() {
+            isCloudMode = false;
+            updateConnectionStatus(false, true); // Local mode indicator
+            loadLocalData();
+        }
+
+        async function setupAuth(auth) {
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
@@ -43,36 +66,42 @@
                     await signInAnonymously(auth);
                 }
             } catch (error) {
-                console.error("Auth Error:", error);
-                showToast("서버 연결 실패. 새로고침 해주세요.");
+                console.error("Auth Failed:", error);
+                // 인증 실패 시 로컬 모드로 전환
+                activateLocalMode();
             }
         }
 
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                currentUser = user;
-                window.currentUser = user;
-                isAuthReady = true;
-                updateConnectionStatus(true);
-                
-                // 인증되자마자 고정된 여행 ID로 자동 연결
-                connectToTrip(FIXED_TRIP_ID);
-            } else {
-                updateConnectionStatus(false);
-                isAuthReady = false;
-            }
-        });
+        // 인증 상태 감지 (Cloud Mode일 때만 동작)
+        if (typeof getAuth !== 'undefined') {
+             // 모듈 로드 시점 문제 방지를 위해 initApp 내부에서 처리하지만, 
+             // 전역 스코프에서 SDK import가 되므로 여기서는 로직만 준비
+        }
 
-        // 여행 연결 함수 (자동 호출됨)
-        window.connectToTrip = function(tripId) {
-            if (!currentUser) return; // 유저 없으면 중단
-            if (unsubscribe) unsubscribe();
-
+        window.updateConnectionStatus = function(isOnline, isLocal = false) {
             const statusEl = document.getElementById('sync-status');
-            if(statusEl) statusEl.innerHTML = '<i class="fa-solid fa-rotate fa-spin"></i> 데이터 불러오는 중...';
+            const statusElMob = document.getElementById('sync-status-mobile');
+            let html = '';
+            
+            if (isLocal) {
+                html = '<span class="text-stone-500"><i class="fa-solid fa-save"></i> 로컬 모드 (기기 저장)</span>';
+            } else if (isOnline) {
+                html = '<span class="text-green-500"><i class="fa-solid fa-cloud"></i> 실시간 동기화 중</span>';
+            } else {
+                html = '<span class="text-stone-400"><i class="fa-solid fa-circle-notch fa-spin"></i> 연결 중...</span>';
+            }
 
-            // 경로 규칙 준수: artifacts/{appId}/public/data/{collectionName}/{docId}
-            const tripRef = doc(db, 'artifacts', appId, 'public', 'data', 'osaka_trips', tripId);
+            if(statusEl) statusEl.innerHTML = html;
+            if(statusElMob) statusElMob.innerHTML = html;
+        };
+
+        // 데이터 로드 (분기 처리)
+        window.connectToTrip = function(tripId) {
+            if (!isCloudMode) return; // 로컬 모드면 무시
+
+            if (unsubscribe) unsubscribe();
+            
+            const tripRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'osaka_trips', tripId);
 
             unsubscribe = onSnapshot(tripRef, (docSnap) => {
                 if (docSnap.exists()) {
@@ -80,56 +109,94 @@
                     if (data.items) {
                         window.tripData = data.items;
                         window.renderCards();
-                        if(statusEl) statusEl.innerHTML = '<i class="fa-solid fa-check text-green-400"></i> 동기화 완료';
+                        updateConnectionStatus(true);
                     }
                 } else {
-                    // 데이터가 아직 없으면 (최초 실행)
-                    // 로컬에 기존 데이터가 있다면 업로드, 아니면 빈 배열
-                    if (window.tripData && window.tripData.length > 0) {
-                        saveDataToCloud(); 
-                    } else {
-                        window.tripData = [];
+                    // 데이터 없음 -> 초기화
+                    if (window.tripData.length === 0) {
                         window.renderCards();
-                        if(statusEl) statusEl.innerHTML = '데이터 없음 (등록 필요)';
+                    } else {
+                        // 로컬에 데이터가 있으면 업로드 시도
+                        saveData(); 
                     }
+                    updateConnectionStatus(true);
                 }
             }, (error) => {
                 console.error("Sync Error:", error);
-                // 권한 에러인지 확인
+                // 에러 발생 시 로컬 모드로 전환 제안 혹은 유지
                 if (error.code === 'permission-denied') {
-                    showToast("권한 오류: 페이지를 새로고침 해주세요.");
-                } else {
-                    showToast("데이터 동기화 실패.");
+                    activateLocalMode(); // 권한 없으면 로컬로 전환
                 }
-                if(statusEl) statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-red-400"></i> 연결 실패';
             });
         };
 
-        // 데이터 저장 함수
-        window.saveDataToCloud = async function() {
-            if (!currentUser) return;
+        // 데이터 저장 (분기 처리)
+        window.saveData = async function() {
+            // 1. 로컬 저장 (항상 수행)
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(window.tripData));
 
-            const tripRef = doc(db, 'artifacts', appId, 'public', 'data', 'osaka_trips', FIXED_TRIP_ID);
-            
-            // 저장 중 상태 표시
-            const statusEl = document.getElementById('sync-status');
-            if(statusEl) statusEl.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> 저장 중...';
-
-            try {
-                await setDoc(tripRef, {
-                    items: window.tripData,
-                    lastUpdated: new Date().toISOString(),
-                    updatedBy: currentUser.uid
-                }, { merge: true });
-                console.log("Saved successfully");
-                // 저장이 완료되면 onSnapshot이 다시 트리거되어 '동기화 완료'로 바뀝니다.
-            } catch (error) {
-                console.error("Save Error:", error);
-                showToast("저장 실패! 다시 시도해주세요.");
+            // 2. 클라우드 저장 (가능한 경우)
+            if (isCloudMode && window.currentUser) {
+                const tripRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'osaka_trips', FIXED_TRIP_ID);
+                try {
+                    const statusEl = document.getElementById('sync-status');
+                    if(statusEl) statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...';
+                    
+                    await setDoc(tripRef, {
+                        items: window.tripData,
+                        lastUpdated: new Date().toISOString(),
+                        updatedBy: window.currentUser.uid
+                    }, { merge: true });
+                    
+                    // 저장 완료는 onSnapshot이 처리함
+                } catch (error) {
+                    console.error("Cloud Save Error:", error);
+                    // 실패해도 로컬엔 저장되었으므로 조용히 넘어감
+                }
+            } else {
+                // 로컬 모드일 때 UI 갱신
+                window.renderCards();
             }
         };
 
-        initAuth();
+        function loadLocalData() {
+            const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (saved) {
+                try {
+                    window.tripData = JSON.parse(saved);
+                    window.renderCards();
+                } catch (e) {
+                    console.error("Local data parse error", e);
+                }
+            } else {
+                // 레거시 데이터 확인
+                const legacyKeys = ['osaka_trip_master_db_v2', 'osaka_trip_master_db'];
+                for (let key of legacyKeys) {
+                    const old = localStorage.getItem(key);
+                    if (old) {
+                        window.tripData = JSON.parse(old);
+                        window.renderCards();
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 초기화 실행
+        initApp().then(() => {
+            // Cloud 모드일 때 Auth Listener 설정 (여기서 실행)
+            if (isCloudMode && window.auth) {
+                onAuthStateChanged(window.auth, (user) => {
+                    if (user) {
+                        window.currentUser = user;
+                        connectToTrip(FIXED_TRIP_ID);
+                    } else {
+                        // 로그인 풀림
+                    }
+                });
+            }
+        });
+
     </script>
 
     <style>
@@ -181,8 +248,8 @@
             </h1>
             <div class="flex gap-2 items-center">
                 <!-- 상태 표시 -->
-                <span id="sync-status" class="text-[10px] text-stone-400 mr-2 hidden sm:block">
-                    <i class="fa-solid fa-circle-notch fa-spin"></i> 연결 중...
+                <span id="sync-status" class="text-[10px] hidden sm:block mr-2">
+                    <!-- JS로 채워짐 -->
                 </span>
 
                 <button onclick="switchMode('view')" id="btn-view" class="text-xs bg-rose-600 text-white px-3 py-2 rounded-lg font-bold shadow transition">
@@ -195,16 +262,8 @@
         </div>
         <!-- 모바일용 상태 표시 (헤더 아래) -->
         <div class="sm:hidden bg-stone-50 border-b border-stone-100 py-1 text-center">
-             <span id="sync-status-mobile" class="text-[10px] text-stone-400">
-                 <script>
-                     // 상태 텍스트 연동 (단순화)
-                     setInterval(() => {
-                         const main = document.getElementById('sync-status');
-                         const mob = document.getElementById('sync-status-mobile');
-                         if(main && mob) mob.innerHTML = main.innerHTML;
-                     }, 500);
-                 </script>
-                 연결 중...
+             <span id="sync-status-mobile" class="text-[10px]">
+                 <!-- JS로 채워짐 -->
              </span>
         </div>
     </header>
@@ -289,8 +348,9 @@
                 <!-- JS로 생성됨 -->
             </div>
             
-            <div class="text-center pb-10 text-[10px] text-stone-400">
-                <p>클라우드 동기화 켜짐 (공유 모드) <i class="fa-solid fa-check text-green-500"></i></p>
+            <!-- 백업/복원 버튼 (로컬 모드일 때만 유용) -->
+            <div id="backup-restore-area" class="text-center pb-10 space-y-4">
+                <!-- JS에서 상태에 따라 표시 -->
             </div>
         </div>
 
@@ -482,24 +542,7 @@
             }, 2000);
         }
 
-        // Legacy Data Loading
-        function loadLegacyData() {
-            const legacyKeys = ['osaka_trip_master_db_v2', 'osaka_trip_master_db', 'osaka_planner_final_v14'];
-            for (let key of legacyKeys) {
-                const saved = localStorage.getItem(key);
-                if (saved) {
-                    try {
-                        window.tripData = JSON.parse(saved);
-                        console.log("Legacy data loaded:", key);
-                        window.renderCards();
-                        return;
-                    } catch(e) { console.error(e); }
-                }
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
-            loadLegacyData();
             toggleFields();
             
             document.addEventListener('paste', function(e) {
@@ -670,14 +713,15 @@
                 showToast("저장되었습니다.");
             }
 
-            window.saveDataToCloud();
+            // 통합 저장 함수 호출 (로컬 or 클라우드)
+            window.saveData(); 
             switchMode('view');
         }
 
         window.deleteItem = function(id) {
             showConfirm("삭제", "이 항목을 삭제하시겠습니까?", () => {
                 window.tripData = window.tripData.filter(i => i.id !== id);
-                window.saveDataToCloud();
+                window.saveData(); // 통합 저장 함수 호출
                 showToast("삭제되었습니다.");
             });
         }
@@ -728,7 +772,7 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                    const preview = document.getElementById('preview-img');
+                    const preview = document.getElementById('menu-preview');
                     preview.src = dataUrl;
                     preview.classList.remove('hidden');
                 }
@@ -748,7 +792,7 @@
             const index = window.tripData.findIndex(i => i.id == id);
             if(index !== -1) {
                 window.tripData[index].menuImgData = preview.src;
-                window.saveDataToCloud();
+                window.saveData(); // 통합 저장 함수 호출
                 window.closeMenuModal();
             }
         }
