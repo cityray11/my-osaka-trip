@@ -102,7 +102,7 @@
             <!-- 2. 숙소 -->
             <div id="hotel-info" class="bg-white rounded-xl shadow-md overflow-hidden mb-6 border border-stone-100 flex flex-row h-auto relative">
                 <div class="w-1/3 md:w-40 relative bg-stone-200 group min-h-[160px]">
-                    <img src="./hotel_main.jpg" onerror="this.src='https://placehold.co/400x600?text=Hotel'" class="absolute inset-0 w-full h-full object-cover cursor-pointer" onclick="openLightbox(this.src)">
+                    <img src="./hotel_main.jpg" onerror="this.src='https://placehold.co/400x600?text=Hotel'" class="absolute inset-0 w-full h-full object-cover" onclick="openLightbox(this.src)">
                     <div class="absolute top-0 left-0 bg-purple-600 text-white text-[10px] font-bold px-2 py-1 rounded-br-lg shadow-sm z-10 pointer-events-none">Base Camp</div>
                 </div>
                 <div class="flex-1 p-4 flex flex-col justify-between">
@@ -284,7 +284,6 @@
             renderCards();
             toggleFields();
             
-            // 메인 등록 폼 붙여넣기
             document.addEventListener('paste', function(e) {
                 if (document.getElementById('upload-mode').classList.contains('active')) {
                     handlePaste(e, processImageFile, 'file');
@@ -352,7 +351,6 @@
         }
 
         function editItem(id) {
-            // ID 타입 문제 해결 (문자열/숫자 비교)
             const item = tripData.find(i => i.id == id);
             if (!item) return;
 
@@ -361,7 +359,6 @@
             if (radio) radio.checked = true;
             toggleFields();
 
-            // 값 채우기
             document.getElementById('input-region').value = item.region || '';
             document.getElementById('input-name').value = item.name || '';
             document.getElementById('input-origin').value = item.origin || '';
@@ -373,12 +370,11 @@
             document.getElementById('input-related').value = item.relatedLink || '';
             document.getElementById('input-reserve').value = item.reserveLink || '';
 
-            // 이미지 처리
             if (item.imgData) {
                 document.getElementById('preview-img').src = item.imgData;
                 document.getElementById('preview-img').classList.remove('hidden');
                 document.getElementById('existing-img-data').value = item.imgData;
-                switchImgMode('file'); 
+                switchImgMode('file');
             } else {
                 document.getElementById('preview-img').classList.add('hidden');
                 document.getElementById('existing-img-data').value = '';
@@ -386,7 +382,10 @@
 
             document.getElementById('form-title').innerText = "내용 수정";
             document.getElementById('save-btn').innerHTML = '<i class="fa-solid fa-rotate"></i> 수정 완료';
+            
+            // 화면 전환 및 스크롤
             switchMode('upload');
+            window.scrollTo(0,0);
         }
 
         function saveItem(e) {
@@ -400,7 +399,6 @@
 
             const category = formData.get('category');
             
-            // 기존 데이터 유지 (메뉴 이미지 등)
             let existingItem = {};
             if (editIdStr) {
                 existingItem = tripData.find(i => i.id == editIdStr) || {};
@@ -420,7 +418,7 @@
                 destination: category === '교통' ? formData.get('destination') : null,
                 menu: category === '식당' ? formData.get('menu') : null,
                 price: category === '식당' ? formData.get('price') : null,
-                menuImgData: existingItem.menuImgData || null // 기존 메뉴 이미지 유지
+                menuImgData: existingItem.menuImgData || null 
             };
 
             if (editIdStr) {
@@ -467,7 +465,6 @@
             if(item.menuImgData) {
                 preview.src = item.menuImgData;
                 preview.classList.remove('hidden');
-                // placeholder.classList.add('hidden'); // Keep placeholder behind or hide it
             } else {
                 preview.src = "";
                 preview.classList.add('hidden');
@@ -483,7 +480,6 @@
             const modal = document.getElementById('menu-modal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
-            // Reset fields
             document.getElementById('menu-file-input').value = '';
             document.getElementById('menu-url-input').value = '';
         }
@@ -496,7 +492,7 @@
                 img.src = e.target.result;
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 1200; // 메뉴판은 글씨가 있어서 해상도 높게
+                    const MAX_WIDTH = 1200; 
                     let width = img.width; let height = img.height;
                     if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
                     canvas.width = width; canvas.height = height;
@@ -580,7 +576,6 @@
                 else if(item.category === '쇼핑') badgeClass = 'bg-yellow-100 text-yellow-600';
                 else if(item.category === '교통') badgeClass = 'bg-green-100 text-green-600';
 
-                // 이미지 (4:3 비율)
                 let imgHtml = item.imgData ? 
                     `<div class="w-full aspect-[4/3] bg-stone-200 overflow-hidden relative cursor-pointer" onclick="openLightbox('${item.imgData}')">
                         <img src="${item.imgData}" class="w-full h-full object-cover transition hover:scale-105 duration-500">
@@ -591,20 +586,18 @@
                 if(item.category === '교통') {
                     contentHtml = `<div class="bg-green-50 p-2 rounded border border-green-100 mb-2"><div class="font-bold text-green-700 text-sm truncate">${item.origin}</div><div class="text-center text-green-400 text-xs py-1"><i class="fa-solid fa-arrow-down"></i></div><div class="font-bold text-green-700 text-sm truncate">${item.destination}</div></div>`;
                 } else {
-                    // 글자 잘림 방지 (h-auto, whitespace-normal)
                     contentHtml = `
                     <div class="flex flex-wrap gap-1 mb-2">
                         ${item.region ? `<span class="bg-stone-100 text-stone-500 text-[10px] px-1.5 py-0.5 rounded font-bold">${item.region}</span>` : ''}
                     </div>
-                    <h3 class="text-base font-bold text-stone-800 leading-tight mb-2 h-auto">${item.name}</h3>`;
+                    <h3 class="text-base font-bold text-stone-800 leading-tight mb-2 h-auto whitespace-normal">${item.name}</h3>`;
                 }
 
-                // 식당 상세 박스 (줄바꿈 허용)
                 let detailBox = '';
                 if(item.category === '식당' && (item.menu || item.price)) {
                     detailBox = `
                     <div class="bg-stone-50 p-2 rounded border border-stone-100 text-xs mb-2">
-                        ${item.menu ? `<div class="mb-1"><span class="text-stone-400 font-bold block mb-0.5">MENU</span><span class="text-stone-700 font-bold block whitespace-normal break-words">${item.menu}</span></div>` : ''}
+                        ${item.menu ? `<div class="mb-1"><span class="text-stone-400 font-bold block mb-0.5">MENU</span><span class="text-stone-700 font-bold block whitespace-normal break-words leading-tight">${item.menu}</span></div>` : ''}
                         ${item.price ? `<div><span class="text-stone-400 font-bold mr-1">PRICE</span><span class="text-stone-700 font-bold">${item.price}</span></div>` : ''}
                     </div>`;
                 }
@@ -613,14 +606,11 @@
                 let relatedBtn = item.relatedLink ? `<a href="${item.relatedLink}" target="_blank" class="flex-1 bg-blue-50 border border-blue-100 text-blue-500 py-2 rounded text-[10px] font-bold hover:bg-blue-100 text-center">소개</a>` : '';
                 let reserveBtn = (item.category !== '쇼핑' && item.reserveLink) ? `<a href="${item.reserveLink}" target="_blank" class="flex-1 bg-rose-50 border border-rose-100 text-rose-500 py-2 rounded text-[10px] font-bold hover:bg-rose-100 text-center">예약</a>` : '';
                 
-                // 메뉴판 버튼 (식당 전용)
                 let menuBtn = '';
                 if(item.category === '식당') {
                     if(item.menuImgData) {
-                        // 등록됨: 컬러 & 라이트박스 오픈
-                        menuBtn = `<button onclick="openLightbox('${item.menuImgData}')" class="flex-1 bg-rose-500 border border-rose-500 text-white py-2 rounded text-[10px] font-bold hover:bg-rose-600 text-center">메뉴판</button>`;
+                        menuBtn = `<button onclick="openLightbox('${item.menuImgData}')" class="flex-1 bg-rose-500 border border-rose-500 text-white py-2 rounded text-[10px] font-bold hover:bg-rose-600 text-center shadow-sm">메뉴판</button>`;
                     } else {
-                        // 미등록: 회색 & 등록 모달 오픈
                         menuBtn = `<button onclick="openMenuModal(${item.id})" class="flex-1 bg-stone-100 border border-stone-200 text-stone-400 py-2 rounded text-[10px] font-bold hover:bg-stone-200 text-center">📖메뉴</button>`;
                     }
                 }
@@ -631,7 +621,7 @@
 
                 container.innerHTML += `
                 <div class="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden group relative flex flex-col">
-                    <div class="absolute top-2 right-2 flex gap-1 z-20 opacity-0 group-hover:opacity-100 transition duration-200">
+                    <div class="absolute top-2 right-2 flex gap-1 z-30 opacity-100 transition duration-200">
                         <button onclick="editItem(${item.id}); event.stopPropagation();" class="w-7 h-7 bg-white hover:bg-blue-500 hover:text-white text-stone-500 rounded-full flex items-center justify-center shadow-md text-xs cursor-pointer"><i class="fa-solid fa-pencil"></i></button>
                         <button onclick="deleteItem(${item.id}); event.stopPropagation();" class="w-7 h-7 bg-white hover:bg-red-500 hover:text-white text-stone-500 rounded-full flex items-center justify-center shadow-md text-xs cursor-pointer"><i class="fa-solid fa-trash-can"></i></button>
                     </div>
@@ -641,7 +631,7 @@
                         ${contentHtml}
                         ${detailBox}
                         <div class="flex-1">
-                            <p class="text-xs text-stone-400 line-clamp-2 mt-1">${item.desc || ''}</p>
+                            <p class="text-xs text-stone-400 line-clamp-2 mt-1 whitespace-pre-wrap">${item.desc || ''}</p>
                         </div>
                         ${btnsHtml}
                     </div>
@@ -650,54 +640,30 @@
         }
 
         // --- Helpers ---
-        function switchMode(mode) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.getElementById(mode + '-mode').classList.add('active');
-            const viewBtn = document.getElementById('btn-view');
-            const uploadBtn = document.getElementById('btn-upload');
-            if(mode === 'view') {
-                viewBtn.className = "text-xs bg-rose-600 text-white px-3 py-2 rounded-lg font-bold shadow transition";
-                uploadBtn.className = "text-xs bg-white text-stone-600 border border-stone-300 px-3 py-2 rounded-lg font-bold shadow-sm transition hover:bg-stone-50";
-                renderCards(); 
-            } else {
-                uploadBtn.className = "text-xs bg-rose-600 text-white px-3 py-2 rounded-lg font-bold shadow transition";
-                viewBtn.className = "text-xs bg-white text-stone-600 border border-stone-300 px-3 py-2 rounded-lg font-bold shadow-sm transition hover:bg-stone-50";
-            }
+        function openLightbox(src) {
+            const lightbox = document.getElementById('lightbox');
+            const img = document.getElementById('lightbox-img');
+            img.src = src;
+            lightbox.classList.remove('hidden');
+            lightbox.classList.add('flex');
         }
-
-        function filterCategory(cat) {
-            currentFilter = cat;
-            currentRegion = 'all'; 
-            updateFilterButtons();
-            renderCards();
+        function closeLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            lightbox.classList.add('hidden');
+            lightbox.classList.remove('flex');
         }
-
-        function filterRegion(reg) {
-            currentRegion = reg;
-            renderCards();
-            updateRegionButtons();
+        function toggleFields() {
+            const category = document.querySelector('input[name="category"]:checked').value;
+            const groupStandard = document.getElementById('group-standard'); 
+            const groupTransport = document.getElementById('group-transport');
+            const groupFood = document.getElementById('group-food');
+            const fieldMap = document.getElementById('field-mapLink'); 
+            const fieldReserve = document.getElementById('field-reserveLink');
+            groupStandard.style.display = 'block'; groupTransport.style.display = 'none'; groupFood.style.display = 'none'; fieldMap.style.display = 'block'; fieldReserve.style.display = 'block';
+            if (category === '교통') { groupStandard.style.display = 'none'; groupTransport.style.display = 'block'; fieldMap.style.display = 'none'; } 
+            else if (category === '식당') { groupFood.style.display = 'grid'; } 
+            else if (category === '쇼핑') { fieldReserve.style.display = 'none'; }
         }
-
-        function updateFilterButtons() {
-            document.querySelectorAll('.cat-btn').forEach(btn => {
-                if (btn.innerText.includes(currentFilter.replace('all','전체'))) {
-                    btn.className = "cat-btn active bg-stone-800 text-white px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm";
-                } else {
-                    btn.className = "cat-btn bg-white border border-stone-300 text-stone-600 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm";
-                }
-            });
-        }
-
-        function updateRegionButtons() {
-            document.querySelectorAll('.reg-btn').forEach(btn => {
-                if (btn.innerText === currentRegion || (currentRegion === 'all' && btn.innerText === '전체')) {
-                    btn.className = "reg-btn bg-stone-600 text-white px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap shadow-sm";
-                } else {
-                    btn.className = "reg-btn bg-stone-200 text-stone-600 px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap shadow-sm";
-                }
-            });
-        }
-
         function switchImgMode(mode) {
             const urlInput = document.getElementById('img-url-input'); const fileInput = document.getElementById('img-file-input');
             const btnUrl = document.getElementById('btn-img-url'); const btnFile = document.getElementById('btn-img-file');
@@ -733,34 +699,8 @@
             reader.readAsDataURL(file);
         }
         function handleFileSelect(event) { processImageFile(event.target.files[0]); }
-
-        function openLightbox(src) {
-            const lightbox = document.getElementById('lightbox');
-            const img = document.getElementById('lightbox-img');
-            img.src = src;
-            lightbox.classList.remove('hidden');
-            lightbox.classList.add('flex');
-        }
-        function closeLightbox() {
-            const lightbox = document.getElementById('lightbox');
-            lightbox.classList.add('hidden');
-            lightbox.classList.remove('flex');
-        }
-        function toggleFields() {
-            const category = document.querySelector('input[name="category"]:checked').value;
-            const groupStandard = document.getElementById('group-standard'); 
-            const groupTransport = document.getElementById('group-transport');
-            const groupFood = document.getElementById('group-food');
-            const fieldMap = document.getElementById('field-mapLink'); 
-            const fieldReserve = document.getElementById('field-reserveLink');
-            groupStandard.style.display = 'block'; groupTransport.style.display = 'none'; groupFood.style.display = 'none'; fieldMap.style.display = 'block'; fieldReserve.style.display = 'block';
-            if (category === '교통') { groupStandard.style.display = 'none'; groupTransport.style.display = 'block'; fieldMap.style.display = 'none'; } 
-            else if (category === '식당') { groupFood.style.display = 'grid'; } 
-            else if (category === '쇼핑') { fieldReserve.style.display = 'none'; }
-        }
     </script>
 
-    <!-- 라이트박스 -->
     <div id="lightbox" class="fixed inset-0 bg-black/95 z-[100] hidden items-center justify-center p-4 cursor-pointer" onclick="closeLightbox()">
         <img id="lightbox-img" class="max-w-full max-h-[90vh] object-contain rounded shadow-2xl" src="">
     </div>
