@@ -332,6 +332,48 @@
             window.scrollTo(0,0);
         }
 
+        // --- UI Control (Missing Functions Restored) ---
+        function switchMode(mode) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(mode + '-mode').classList.add('active');
+            
+            // 버튼 상태 업데이트 (헤더)
+            const btnView = document.getElementById('btn-view');
+            const btnUpload = document.getElementById('btn-upload');
+            
+            if (mode === 'view') {
+                btnView.className = "text-xs bg-rose-600 text-white px-3 py-2 rounded-lg font-bold shadow transition";
+                btnUpload.className = "text-xs bg-white text-stone-600 border border-stone-300 px-3 py-2 rounded-lg font-bold shadow-sm transition hover:bg-stone-50";
+                renderCards(); // 뷰 모드로 갈 때 카드 갱신
+            } else {
+                btnView.className = "text-xs bg-white text-stone-600 border border-stone-300 px-3 py-2 rounded-lg font-bold shadow-sm transition hover:bg-stone-50";
+                btnUpload.className = "text-xs bg-rose-600 text-white px-3 py-2 rounded-lg font-bold shadow transition";
+            }
+            window.scrollTo(0,0);
+        }
+
+        function filterCategory(category) {
+            currentFilter = category;
+            currentRegion = 'all'; // 카테고리 변경 시 지역 필터 초기화
+            
+            // 버튼 UI 업데이트
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                if ((category === 'all' && btn.textContent === '전체') || 
+                    btn.textContent.includes(category)) {
+                    btn.className = "cat-btn active bg-stone-800 text-white px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm";
+                } else {
+                    btn.className = "cat-btn bg-white border border-stone-300 text-stone-600 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm";
+                }
+            });
+            
+            renderCards();
+        }
+
+        function filterRegion(region) {
+            currentRegion = region;
+            renderCards();
+        }
+
         // --- Upload/Edit Logic ---
         function initUploadMode() {
             resetForm();
@@ -665,7 +707,7 @@
             else if (category === '쇼핑') { fieldReserve.style.display = 'none'; }
         }
         function switchImgMode(mode) {
-            const urlInput = document.getElementById('img-url-input'); const fileInput = document.getElementById('img-file-input');
+            const urlInput = document.getElementById('imgUrlField'); const fileInput = document.getElementById('imgFileField');
             const btnUrl = document.getElementById('btn-img-url'); const btnFile = document.getElementById('btn-img-file');
             if(mode === 'url') { urlInput.classList.remove('hidden'); fileInput.classList.add('hidden'); btnUrl.className = "text-[10px] px-3 py-1 bg-stone-800 text-white rounded-full"; btnFile.className = "text-[10px] px-3 py-1 bg-stone-200 text-stone-600 rounded-full"; } 
             else { urlInput.classList.add('hidden'); fileInput.classList.remove('hidden'); btnFile.className = "text-[10px] px-3 py-1 bg-stone-800 text-white rounded-full"; btnUrl.className = "text-[10px] px-3 py-1 bg-stone-200 text-stone-600 rounded-full"; }
@@ -700,35 +742,5 @@
         }
         function handleFileSelect(event) { processImageFile(event.target.files[0]); }
     </script>
-
-    <div id="lightbox" class="fixed inset-0 bg-black/95 z-[100] hidden items-center justify-center p-4 cursor-pointer" onclick="closeLightbox()">
-        <img id="lightbox-img" class="max-w-full max-h-[90vh] object-contain rounded shadow-2xl" src="">
-    </div>
-
-    <!-- 메뉴판 등록 팝업 -->
-    <div id="menu-modal" class="fixed inset-0 bg-black/50 z-[110] hidden items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 transform transition-all scale-100">
-            <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i class="fa-solid fa-book-open"></i> 메뉴판 등록</h3>
-            <input type="hidden" id="menu-target-id">
-            
-            <div class="space-y-4">
-                <div class="border-2 border-dashed border-stone-300 rounded-lg h-40 flex flex-col items-center justify-center bg-stone-50 relative overflow-hidden" id="menu-drop-zone">
-                    <img id="menu-preview" class="absolute inset-0 w-full h-full object-contain hidden bg-black">
-                    <div class="text-center p-4" id="menu-placeholder">
-                        <i class="fa-solid fa-cloud-arrow-up text-2xl text-stone-400 mb-2"></i>
-                        <p class="text-xs text-stone-500">이미지 붙여넣기(Ctrl+V)<br>또는 클릭하여 업로드</p>
-                    </div>
-                    <input type="file" id="menu-file-input" class="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onchange="processMenuFile(this.files[0])">
-                </div>
-                <input type="url" id="menu-url-input" placeholder="또는 이미지 주소(URL) 입력" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-xs" onchange="document.getElementById('menu-preview').src=this.value; document.getElementById('menu-preview').classList.remove('hidden');">
-            </div>
-
-            <div class="flex gap-2 mt-6">
-                <button onclick="closeMenuModal()" class="flex-1 py-2 rounded-lg border border-stone-300 text-stone-500 text-sm font-bold hover:bg-stone-50">취소</button>
-                <button onclick="saveMenuImage()" class="flex-1 py-2 rounded-lg bg-rose-600 text-white text-sm font-bold hover:bg-rose-700">저장</button>
-            </div>
-        </div>
-    </div>
-
 </body>
 </html>
